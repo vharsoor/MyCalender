@@ -52,7 +52,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -76,6 +75,19 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.navigation.compose)
+
+    // testing library
+    testImplementation(libs.androidx.core.testing)
+
+    // Mockito
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.inline)
+
+    // Coroutine testing
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    // MockWebServer
+    testImplementation(libs.mockwebserver)
 
     // retrofit
     implementation(libs.retrofit)
