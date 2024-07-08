@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Calender</string>
+    <string name="title_activity_calender_tasks">CalenderTasks</string>
+</resources>
