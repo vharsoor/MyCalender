@@ -1,5 +1,6 @@
 package dev.sudhanshu.calender.data.remote
 
+import dev.sudhanshu.calender.data.model.ApiDelteTaskReq
 import dev.sudhanshu.calender.data.model.ApiGetTaskReq
 import dev.sudhanshu.calender.data.model.ApiSuccess
 import dev.sudhanshu.calender.data.model.TaskModel
@@ -18,5 +19,5 @@ interface ApiService {
     suspend fun getCalendarTaskLists(@Body userId: ApiGetTaskReq): TaskResponse
 
     @POST("/api/deleteCalendarTask")
-    suspend fun deleteCalendarTask(@Query("user_id") userId: Int, @Query("task_id") taskId: Int): ApiSuccess
+    suspend fun deleteCalendarTask(@Body apiDelteTaskReq: ApiDelteTaskReq): ApiSuccess
 }

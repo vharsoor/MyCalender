@@ -71,8 +71,16 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun deleteTask(userId: Int, taskId: Int) {
-
+    fun deleteTask(userId: Int, taskId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                deleteTaskUseCase.invoke(userId, taskId)
+                onSuccess()
+            }catch (e : Exception){
+                Log.i("--ViewModel--", "getTaskList >> ${e.message}")
+                onError(e.message.toString())
+            }
+        }
     }
 
     private fun filterTasksByDate(tasks: List<Task>, date: String?): List<Task> {

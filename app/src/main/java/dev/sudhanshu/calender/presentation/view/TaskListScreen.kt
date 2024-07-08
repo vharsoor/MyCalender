@@ -95,7 +95,15 @@ fun TaskListScreen(userId: Int,  viewModel: TaskViewModel = hiltViewModel()) {
                     modifier = Modifier.fillMaxSize().padding(10.dp).background(color = MaterialTheme.colors.background)
                 ) {
                     items(tasks!!) { task ->
-                        TaskCard(task = task)
+                        TaskCard(task = task, onDelete = {
+                            viewModel.deleteTask(userId, task.task_id, onSuccess = {
+                                viewModel.getTaskList(userId, onSuccess = {
+
+                                }, onError = {})
+                            }, onError = {
+
+                            })
+                        })
                     }
                 }
             }

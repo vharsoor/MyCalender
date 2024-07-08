@@ -8,9 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -95,7 +97,15 @@ fun CalenderTaskScreen(userId: Int, date: String? = null,  viewModel: TaskViewMo
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(tasks!!) { task ->
-                        TaskCard(task = task)
+                        TaskCard(task = task, onDelete = {
+                            viewModel.deleteTask(userId, task.task_id, onSuccess = {
+                                viewModel.getTaskListByDate(userId, date, onSuccess = {
+
+                                }, onError = {})
+                            }, onError = {
+
+                            })
+                        })
                     }
                 }
             }
@@ -107,7 +117,7 @@ fun CalenderTaskScreen(userId: Int, date: String? = null,  viewModel: TaskViewMo
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TaskCard(task: Task) {
+fun TaskCard(task: Task, onDelete : (Task) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,12 +151,31 @@ fun TaskCard(task: Task) {
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = task.task_detail.description ?: "",
-                style = MaterialTheme.typography.body2,
-                color = MaterialTheme.colors.onBackground,
-                fontSize = 12.sp
-            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ){
+                Text(
+                    text = task.task_detail.description ?: "",
+                    style = MaterialTheme.typography.body2,
+                    color = MaterialTheme.colors.onBackground,
+                    fontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    painter = painterResource(id = R.drawable.delete),
+                    contentDescription = "Delete Icon",
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE5FF7F))
+                        .padding(4.dp)
+                        .clickable { onDelete(task) }
+                )
+            }
+
         }
     }
 }

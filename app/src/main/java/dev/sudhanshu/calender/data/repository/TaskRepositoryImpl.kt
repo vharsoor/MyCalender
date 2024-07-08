@@ -1,6 +1,7 @@
 package dev.sudhanshu.calender.data.repository
 
 import android.util.Log
+import dev.sudhanshu.calender.data.model.ApiDelteTaskReq
 import dev.sudhanshu.calender.data.model.ApiGetTaskReq
 import dev.sudhanshu.calender.data.model.ApiSuccess
 import dev.sudhanshu.calender.data.model.Task
@@ -34,7 +35,7 @@ class TaskRepositoryImpl @Inject constructor(private val apiService: ApiService)
 
     override suspend fun deleteTask(userId: Int, taskId: Int): ApiSuccess {
         return try {
-             apiService.deleteCalendarTask(userId, taskId)
+             apiService.deleteCalendarTask(ApiDelteTaskReq(userId, taskId))
         } catch (e: Exception) {
             Log.i("--Repository--", "DeleteTaskAPI >> ${e.message}" )
             ApiSuccess(e.message.toString())
