@@ -102,7 +102,21 @@ fun CalendarApp(userId : Int) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     var isDialogOpen by remember { mutableStateOf(false) }
+    var lastSwipeTime by remember { mutableStateOf(0L) }
+    val debouncePeriod = 300L // milliseconds
 
+    val handleSwipe: (Boolean) -> Unit = { toRight ->
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSwipeTime > debouncePeriod) {
+            lastSwipeTime = currentTime
+            if (toRight) {
+                currentMonth = currentMonth.minusMonths(1)
+            } else {
+                currentMonth = currentMonth.plusMonths(1)
+            }
+            selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier
@@ -122,12 +136,14 @@ fun CalendarApp(userId : Int) {
             CalendarView(currentMonth, selectedDate, onDateSelected = { date ->
                 selectedDate = date
             }, onSwipeRight = {
-                currentMonth = currentMonth.minusMonths(1)
-                selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
+                handleSwipe(true)
+                //currentMonth = currentMonth.minusMonths(1)
+                //selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
 
             }, onSwipeLeft = {
-                currentMonth = currentMonth.plusMonths(1)
-                selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
+                handleSwipe(false)
+                //currentMonth = currentMonth.plusMonths(1)
+                //selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
 
             })
             CalenderTaskScreen(userId = userId, selectedDate.format(dateFormatter))
