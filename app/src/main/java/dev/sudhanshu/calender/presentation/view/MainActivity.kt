@@ -1,5 +1,7 @@
 package dev.sudhanshu.calender.presentation.view
 
+import android.app.admin.DevicePolicyManager
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.setContent
@@ -12,7 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import java.util.*
 import android.os.Bundle
+import android.util.Log
 import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.shape.CircleShape
@@ -47,6 +53,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import androidx.appcompat.app.AppCompatActivity
 
 
 @AndroidEntryPoint
@@ -71,6 +78,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        startScreenPinning()
+    }
+
+    private fun startScreenPinning() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            //val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            //if (devicePolicyManager.isLockTaskPermitted(packageName)) {
+            startLockTask()
+            //else {
+              //  Log.d("Vishrut","No startScreenPinning")
+
+
+            //}
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -89,6 +111,38 @@ class MainActivity : ComponentActivity() {
             decorView.systemUiVisibility = decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         } else {
             decorView.systemUiVisibility = decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+        }
+    }
+
+    private var backPressedTime: Long = 0
+
+    override fun onBackPressed() {
+        if (shouldTriggerPinVerification()) {
+            if (System.currentTimeMillis() - backPressedTime < 2000) {
+                Log.d("Vishrut","Enterted Back triggered")
+                stopScreenPinning()
+            } else {
+                Toast.makeText(this, "Press back again to unpin", Toast.LENGTH_SHORT).show()
+                backPressedTime = System.currentTimeMillis()
+            }
+        } else {
+            // Perform default back action
+            super.onBackPressed()
+        }
+    }
+
+    private fun shouldTriggerPinVerification(): Boolean {
+        // Define your condition for when to trigger PIN verification
+        return true // Replace with actual condition
+    }
+
+
+    private fun stopScreenPinning() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            // Launch the custom PIN verification activity
+            Log.d("Vishrut","Enterted stopScreenPinning")
+            val intent = Intent(this, PinVerificationActivity::class.java)
+            startActivity(intent)
         }
     }
 }
@@ -371,6 +425,38 @@ fun getCurrentTime(): String {
     val currentTime = LocalTime.now()
     val formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
     return currentTime.format(formatter)
+}
+
+
+class PinVerificationActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.d("Vishrut","Enterted PinVerification")
+        setContentView(R.layout.activity_pin_verification)
+        Log.d("Vishrut","After PinVerification")
+
+        val pinEditText: EditText = findViewById(R.id.pinEditText)
+        val verifyButton: Button = findViewById(R.id.verifyButton)
+
+        verifyButton.setOnClickListener {
+            val enteredPin = pinEditText.text.toString()
+            if (isPinCorrect(enteredPin)) {
+                // Exit screen pinning
+                stopLockTask()
+                finish()
+            } else {
+                // Show error message
+                Toast.makeText(this, "Incorrect PIN", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun isPinCorrect(enteredPin: String): Boolean {
+        // Replace with your own PIN verification logic
+        val storedPin = "1234" // This should be securely stored and retrieved
+        return enteredPin == storedPin
+    }
 }
 
 

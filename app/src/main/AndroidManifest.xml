@@ -38,6 +38,9 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Calender">
         </activity>
+        <activity
+            android:name=".presentation.view.PinVerificationActivity"
+            android:theme="@style/Theme.AppCompat.Light"/>
     </application>
 
 </manifest>
