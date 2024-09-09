@@ -47,8 +47,10 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/DEPENDENCIES"
         }
     }
+
 }
 
 dependencies {
@@ -111,4 +113,16 @@ dependencies {
 
     // google font
     implementation(libs.androidx.ui.text.google.fonts)
+
+    //Required for google calendar integration
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-auth:20.6.0")
+    implementation("com.google.http-client:google-http-client-android:1.42.3")
+    implementation("com.google.http-client:google-http-client-gson:1.40.0") // For HttpTransport
+    implementation("com.google.api-client:google-api-client:1.34.1") // For credential support
+    implementation("com.google.http-client:google-http-client-jackson2:1.40.0")
+    implementation("com.google.http-client:google-http-client-gson:1.40.0")
+    implementation("com.google.api-client:google-api-client-android:1.34.1")
+    implementation("com.google.apis:google-api-services-calendar:v3-rev411-1.25.0")
 }

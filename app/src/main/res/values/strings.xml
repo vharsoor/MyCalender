@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Calender</string>
+    <string name="web_client_id">520792040752-fqf2m231jtqjop9lost5fkqppqb0vaf0.apps.googleusercontent.com</string>
+    <string name="event_activity_label">Event Activity</string>
     <string name="title_activity_calender_tasks">CalenderTasks</string>
 </resources>

@@ -55,6 +55,7 @@ class CalenderTasks : ComponentActivity() {
         }
     }
 
+    @Preview
     @Composable
     private fun SetStatusBarColor(color: Color = MaterialTheme.colors.background) {
         window.statusBarColor = color.toArgb()

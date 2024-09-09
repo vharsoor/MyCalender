@@ -3,6 +3,7 @@ package dev.sudhanshu.calender.presentation.view
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -54,25 +55,44 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import androidx.appcompat.app.AppCompatActivity
-
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.tasks.Task
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.JsonFactory
+import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.services.calendar.Calendar
+import com.google.api.services.calendar.CalendarScopes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-
+    private lateinit var googleCalendarClient: Calendar
     private lateinit var settingsPreferences: SettingsPreferences
+    private val job = SupervisorJob()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + job)
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-         settingsPreferences = SettingsPreferences.getInstance(this)
+        settingsPreferences = SettingsPreferences.getInstance(this)
 
 
         setContent {
             CalenderTheme {
                 SetStatusBarColor()
-                Scaffold (Modifier.background(MaterialTheme.colors.background)){ padding ->
+                Scaffold(Modifier.background(MaterialTheme.colors.background)) { padding ->
                     padding.calculateTopPadding()
                     CalendarApp(settingsPreferences.getUserId())
                 }
@@ -80,7 +100,40 @@ class MainActivity : ComponentActivity() {
         }
 
         startScreenPinning()
+
+        // Check if the user has granted calendar permission
+        if (!hasCalendarPermission()) {
+            // If not, request the user to grant calendar permission
+            Log.d("CalendarIntegration", "No calendar permission, will request one")
+            requestCalendarPermission()
+
+            // Wait for the calendar permission result
+
+            coroutineScope.launch(Dispatchers.Main) {
+
+                // Request Google Calendar permission after notification permission is granted
+                if (!hasCalendarPermission()) {
+                    // If not, request the user to grant calendar permission
+                    Log.d("CalendarIntegration", "No calendar permission, will request one")
+                    requestCalendarPermission()
+
+                    // Wait for the calendar permission result
+                    while (!hasCalendarPermission()) {
+                        delay(1000) // Delay for 1 second before checking again
+                    }
+                }
+
+                // Authenticate with Google Sign-In
+                authenticateWithGoogleSignIn()
+
+
+            }
+        }
+
+        // Authenticate with Google Sign-In
+        authenticateWithGoogleSignIn()
     }
+
 
     private fun startScreenPinning() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -119,7 +172,6 @@ class MainActivity : ComponentActivity() {
     override fun onBackPressed() {
         if (shouldTriggerPinVerification()) {
             if (System.currentTimeMillis() - backPressedTime < 2000) {
-                Log.d("Vishrut","Enterted Back triggered")
                 stopScreenPinning()
             } else {
                 Toast.makeText(this, "Press back again to unpin", Toast.LENGTH_SHORT).show()
@@ -140,10 +192,125 @@ class MainActivity : ComponentActivity() {
     private fun stopScreenPinning() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             // Launch the custom PIN verification activity
-            Log.d("Vishrut","Enterted stopScreenPinning")
             val intent = Intent(this, PinVerificationActivity::class.java)
             startActivity(intent)
         }
+    }
+
+
+    private fun authenticateWithGoogleSignIn() {
+        val account = GoogleSignIn.getLastSignedInAccount(this)
+        if (account == null) {
+            signIn()
+        } else {
+            authenticateWithCalendarAPI(account)
+        }
+    }
+
+    private fun signIn() {
+        val webClientId = getString(R.string.web_client_id)
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+
+        Log.d("CalendarIntegration", "Trying to Google SignIn")
+        try {
+            val googleSignInClient = GoogleSignIn.getClient(this, gso)
+            Log.d("CalendarIntegration", "Trying to Google SignIn2")
+            val signInIntent = googleSignInClient.signInIntent
+            startActivityForResult(signInIntent, RC_SIGN_IN)
+        } catch (e: ApiException) {
+            Log.e("CalendarIntegration", "Error with Google Play services API: ${e.statusCode}")
+            // Handle the error based on the status code
+        }
+        //fetchAndDisplayCalendarEvents()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == RC_SIGN_IN) {
+            Log.d("CalendarIntegration", "Got the request Code $requestCode")
+            val task: Task<GoogleSignInAccount> = GoogleSignIn.getSignedInAccountFromIntent(data)
+            handleSignInResult(task)
+        }
+        else {
+            Log.d("CalendarIntegration", "No printing of user info $requestCode")
+        }
+    }
+
+    private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
+        try {
+            val account = completedTask.getResult(ApiException::class.java)
+            authenticateWithCalendarAPI(account!!)
+
+            val email = account.email
+            val displayName = account.displayName
+            val uid = account.id
+            val photoUrl = account.photoUrl
+
+            // Now you can use email, displayName, uid, and photoUrl as needed
+
+            // Now you can use email, displayName, uid, and photoUrl as needed
+            Log.d("User info", "Email: $email")
+            Log.d("User info", "Display Name: $displayName")
+            Log.d("User info", "UID: $uid")
+
+            if (photoUrl != null) {
+                Log.d("User info", "Photo URL: $photoUrl")
+            }
+        } catch (e: ApiException) {
+            Log.e("CalendarIntegration", "Google Sign-In failed: $e")
+            // Handle sign-in failure
+        }
+    }
+
+    private fun authenticateWithCalendarAPI(account: GoogleSignInAccount) {
+        val credential = GoogleAccountCredential.usingOAuth2(
+            applicationContext, setOf(CalendarScopes.CALENDAR_READONLY, CalendarScopes.CALENDAR)
+        )
+
+        credential.selectedAccount = account.account
+
+        Log.d("CalendarIntegration", "google calendar in authenticateWithCalendarAPI")
+
+
+        try{_googleCalendarClient = Calendar.Builder(
+            NetHttpTransport(),
+            JacksonFactory.getDefaultInstance(),
+            credential
+            )
+            .setApplicationName("Calender")
+            .build()}
+        catch (e: Exception) {
+            Log.d("CalendarIntegration", "error in authenticateWithCalendarAPI", e)
+        }
+
+
+
+    }
+
+    private fun hasCalendarPermission(): Boolean {
+        // Check if the app has both read and write permissions for Google Calendar
+        val readPermission = checkSelfPermission(android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+        val writePermission = checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
+        Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
+        return readPermission && writePermission
+    }
+
+    private fun requestCalendarPermission() {
+        // Request both read and write permissions for Google Calendar
+        requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR), 2)
+        //requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR),REQUEST_CALENDAR_ACCESS)
+    }
+
+    companion object {
+        private const val RC_SIGN_IN = 113
+        const val REQUEST_AUTHORIZATION = 126// Any integer constant
+        private lateinit var _googleCalendarClient: Calendar
+
+        val googleCalendarClient: Calendar
+            get() = _googleCalendarClient
     }
 }
 
@@ -151,11 +318,13 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CalendarApp(userId : Int) {
+fun CalendarApp(userId: Int) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    var isDialogOpen by remember { mutableStateOf(false) }
+    var isTaskTypeDialogOpen by remember { mutableStateOf(false) }
+    var isAddTaskDialogOpen by remember { mutableStateOf(false) }
+    var selectedTaskType by remember { mutableStateOf("") }
     var lastSwipeTime by remember { mutableStateOf(0L) }
     val debouncePeriod = 300L // milliseconds
 
@@ -191,46 +360,50 @@ fun CalendarApp(userId : Int) {
                 selectedDate = date
             }, onSwipeRight = {
                 handleSwipe(true)
-                //currentMonth = currentMonth.minusMonths(1)
-                //selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
-
             }, onSwipeLeft = {
                 handleSwipe(false)
-                //currentMonth = currentMonth.plusMonths(1)
-                //selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
-
             })
             CalenderTaskScreen(userId = userId, selectedDate.format(dateFormatter))
-
         }
 
-        // Showing dialog when adding a task
-        if (isDialogOpen) {
-            AddTaskDialog(
-                userId,
-                date = selectedDate.format(dateFormatter),
-                time = getCurrentTime(),
-                onDismiss = { isDialogOpen = false },
-                onSaveTask = {
-                    isDialogOpen = false
+        // Showing TaskTypeDialog when FAB is clicked
+        if (isTaskTypeDialogOpen) {
+            TaskTypeDialog(
+                onDismiss = { isTaskTypeDialogOpen = false },
+                onTaskTypeSelected = { taskType ->
+                    selectedTaskType = taskType
+                    isTaskTypeDialogOpen = false
+                    isAddTaskDialogOpen = true
                 }
             )
         }
 
+        // Showing AddTaskDialog after task type is selected
+        if (isAddTaskDialogOpen) {
+            AddTaskDialog(
+                userId,
+                date = selectedDate.format(dateFormatter),
+                time = getCurrentTime(),
+                initialTitle = selectedTaskType,
+                onDismiss = { isAddTaskDialogOpen = false },
+                onSaveTask = {
+                    isAddTaskDialogOpen = false
+                }
+            )
+        }
 
         FloatingActionButton(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
-            onClick = { isDialogOpen = true },
+            onClick = { isTaskTypeDialogOpen = true },
             containerColor = Color(0xFFE5FF7F)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add Task", tint = Color.Black)
         }
     }
-
-
 }
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -432,9 +605,7 @@ class PinVerificationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("Vishrut","Enterted PinVerification")
         setContentView(R.layout.activity_pin_verification)
-        Log.d("Vishrut","After PinVerification")
 
         val pinEditText: EditText = findViewById(R.id.pinEditText)
         val verifyButton: Button = findViewById(R.id.verifyButton)
