@@ -20,6 +20,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,19 +55,24 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import androidx.appcompat.app.AppCompatActivity
+import dev.sudhanshu.calender.presentation.view.GoogleSignIn
+//import dev.sudhanshu.calender.presentation.view.GoogleCalendarUtils.setupActivityResultLauncher
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+//class MainActivity : AppCompatActivity() {
 
 
     private lateinit var settingsPreferences: SettingsPreferences
+    lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-         settingsPreferences = SettingsPreferences.getInstance(this)
+        settingsPreferences = SettingsPreferences.getInstance(this)
+        //setupActivityResultLauncher(this)
 
 
         setContent {
@@ -75,11 +81,15 @@ class MainActivity : ComponentActivity() {
                 Scaffold (Modifier.background(MaterialTheme.colors.background)){ padding ->
                     padding.calculateTopPadding()
                     CalendarApp(settingsPreferences.getUserId())
+                    //GoogleCalendarUtils.signInAndFetchEvents(this)
+                    GoogleSignIn()
+
                 }
             }
         }
 
         startScreenPinning()
+
     }
 
     private fun startScreenPinning() {

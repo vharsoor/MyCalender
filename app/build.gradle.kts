@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.sudhanshu.calender"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -111,4 +111,20 @@ dependencies {
 
     // google font
     implementation(libs.androidx.ui.text.google.fonts)
+
+    //Google Credentials Manager
+    implementation("androidx.credentials:credentials:1.2.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    //implementation("com.google.apis:google-api-services-calendar:v3-rev411-1.25.0")
+    //implementation("com.google.http-client:google-http-client-android:1.43.0")
+    //implementation("com.google.oauth-client:google-oauth-client-jetty:1.32.1")
+    implementation("com.google.android.gms:play-services-auth:20.6.0")
+    //implementation("androidx.activity:activity-ktx:1.8.2")
+    //implementation("com.google.api-client:google-api-client-android:1.31.5")
+    //implementation("com.google.api-client:google-api-client-gson:1.31.5")
+    //implementation("com.squareup.okhttp3:okhttp:4.9.1")
+    //implementation("org.json:json:20210307")
+    //implementation("com.google.http-client:google-http-client-jackson2:1.42.3")
+    //implementation("androidx.appcompat:appcompat:1.6.1")
 }
