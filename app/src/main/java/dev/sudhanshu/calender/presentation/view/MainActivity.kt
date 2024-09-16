@@ -3,6 +3,7 @@ package dev.sudhanshu.calender.presentation.view
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -54,13 +55,29 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import androidx.appcompat.app.AppCompatActivity
-
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
 
     private lateinit var settingsPreferences: SettingsPreferences
+    private val job = SupervisorJob()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + job)
+    private lateinit var googleSignInHelper: GoogleSignInHelper
+    private lateinit var signInLauncher: ActivityResultLauncher<Intent>
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,6 +97,52 @@ class MainActivity : ComponentActivity() {
         }
 
         startScreenPinning()
+
+
+        coroutineScope.launch(Dispatchers.Main) {
+
+            // Request Google Calendar permission after notification permission is granted
+            if (!hasCalendarPermission()) {
+                // If not, request the user to grant calendar permission
+                Log.d("CalendarIntegration", "No calendar permission, will request one")
+                requestCalendarPermission()
+
+                // Wait for the calendar permission result
+                while (!hasCalendarPermission()) {
+                    delay(1000) // Delay for 1 second before checking again
+                }
+            }
+        }
+
+        // Authenticate with Google Sign-In
+        //authenticateWithGoogleSignIn()
+        googleSignInHelper = GoogleSignInHelper(this)
+
+        // Initialize the ActivityResultLauncher
+        signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val data = result.data
+            if (result.resultCode == RESULT_OK && data != null) {
+                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                googleSignInHelper.handleSignInResult(task, ::onSignInSuccess, ::onSignInError)
+            } else {
+                Log.e("CalendarIntegration", "Sign-in failed with resultCode: ${result.resultCode}")
+            }
+        }
+
+        // Start Google Sign-In
+        googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+
+    }
+
+    private fun onSignInSuccess(accessToken: String) {
+        Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
+        // Proceed with your app logic
+    }
+
+    // Callback when sign-in fails
+    private fun onSignInError(errorCode: Int) {
+        Log.e("CalendarIntegration", "Sign-in failed with error code: $errorCode")
+        // Handle error cases accordingly
     }
 
     private fun startScreenPinning() {
@@ -144,6 +207,30 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(this, PinVerificationActivity::class.java)
             startActivity(intent)
         }
+    }
+
+
+    private fun hasCalendarPermission(): Boolean {
+        // Check if the app has both read and write permissions for Google Calendar
+        val readPermission = checkSelfPermission(android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+        val writePermission = checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
+        Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
+        return readPermission && writePermission
+    }
+
+    private fun requestCalendarPermission() {
+        // Request both read and write permissions for Google Calendar
+        requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR), 2)
+        //requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR),REQUEST_CALENDAR_ACCESS)
+    }
+
+    companion object {
+        private const val RC_SIGN_IN = 113
+        const val REQUEST_AUTHORIZATION = 126// Any integer constant
+        private lateinit var _googleCalendarClient: Calendar
+
+        val googleCalendarClient: Calendar
+            get() = _googleCalendarClient
     }
 }
 
@@ -458,7 +545,3 @@ class PinVerificationActivity : AppCompatActivity() {
         return enteredPin == storedPin
     }
 }
-
-
-
-
