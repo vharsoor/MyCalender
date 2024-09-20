@@ -116,6 +116,7 @@ class MainActivity : ComponentActivity() {
 
         // Authenticate with Google Sign-In
         //authenticateWithGoogleSignIn()
+
         googleSignInHelper = GoogleSignInHelper(this)
 
         // Initialize the ActivityResultLauncher
@@ -220,18 +221,12 @@ class MainActivity : ComponentActivity() {
 
     private fun requestCalendarPermission() {
         // Request both read and write permissions for Google Calendar
+        Log.d("CalendarIntegration", "requestCalendarPermission")
         requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR), 2)
         //requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR),REQUEST_CALENDAR_ACCESS)
     }
 
-    companion object {
-        private const val RC_SIGN_IN = 113
-        const val REQUEST_AUTHORIZATION = 126// Any integer constant
-        private lateinit var _googleCalendarClient: Calendar
 
-        val googleCalendarClient: Calendar
-            get() = _googleCalendarClient
-    }
 }
 
 

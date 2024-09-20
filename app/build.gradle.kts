@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.sudhanshu.calender"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -104,7 +104,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Lifecycle components
-    implementation(libs.androidx.lifecycle.runtime.ktx.v282)
+    //implementation(libs.androidx.lifecycle.runtime.ktx.v282)
 
     // View model
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -125,8 +125,13 @@ dependencies {
     //Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
     implementation("com.google.android.gms:play-services-auth:21.0.0")
+    implementation("com.google.api-client:google-api-client-android:1.32.1")    {
+        exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    }
+    implementation("com.google.apis:google-api-services-calendar:v3-rev411-1.25.0") {
+        exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    }
+
 }
