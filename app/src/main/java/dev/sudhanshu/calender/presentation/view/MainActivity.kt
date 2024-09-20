@@ -132,7 +132,8 @@ class MainActivity : ComponentActivity() {
 
         // Start Google Sign-In
         googleSignInHelper.initiateGoogleSignIn(signInLauncher)
-
+        Log.d("Reminder", "Call getRetrofitInstance")
+        getRetrofitInstance(GoogleSignInHelper.accesstoken!!)
     }
 
     private fun onSignInSuccess(accessToken: String) {
