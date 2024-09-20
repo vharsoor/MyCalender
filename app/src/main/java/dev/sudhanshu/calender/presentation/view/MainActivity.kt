@@ -122,8 +122,10 @@ class MainActivity : ComponentActivity() {
         // Initialize the ActivityResultLauncher
         signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val data = result.data
+            Log.d("CalendarIntegration", "Sign-in result code: ${result.resultCode}")
             if (result.resultCode == RESULT_OK && data != null) {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                Log.d("CalendarIntegration", "Result ok and Sign-in task: $task")
                 googleSignInHelper.handleSignInResult(task, ::onSignInSuccess, ::onSignInError)
             } else {
                 Log.e("CalendarIntegration", "Sign-in failed with resultCode: ${result.resultCode}")
