@@ -133,7 +133,22 @@ class MainActivity : ComponentActivity() {
         }
 
         // Start Google Sign-In
-        googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+        //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+        val refreshToken = googleSignInHelper.loadRefreshToken()
+
+        if (refreshToken != null) {
+            // Use the refresh token to get a new access token
+            Log.d("CalendarIntegration", "Refresh token available, will get new access token $refreshToken")
+            googleSignInHelper.getNewAccessTokenFromRefreshToken(
+                refreshToken,
+                ::onSignInSuccess,
+                ::onSignInError
+            )
+        } else {
+            // No refresh token available, initiate Google Sign-In
+            Log.d("CalendarIntegration", "Logging in for the first time")
+            googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+        }
 
     }
 
@@ -146,6 +161,7 @@ class MainActivity : ComponentActivity() {
     private fun onSignInError(errorCode: Int) {
         Log.e("CalendarIntegration", "Sign-in failed with error code: $errorCode")
         // Handle error cases accordingly
+        googleSignInHelper.clearRefreshToken()
     }
 
     private fun startScreenPinning() {
