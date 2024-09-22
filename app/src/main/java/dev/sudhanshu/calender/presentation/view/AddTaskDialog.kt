@@ -38,8 +38,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-
 //val signInClient = GoogleSignInHelper.googleCalendarClient
+
 
 private val job = Job()
 private val coroutineScope = CoroutineScope(Dispatchers.Main + job)
@@ -56,6 +56,7 @@ fun AddTaskDialog(
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     Dialog(onDismissRequest = { onDismiss() }) {
         Card(
@@ -116,19 +117,20 @@ fun AddTaskDialog(
                                 onDismiss()
                             })
                             //addEvent(title, date)
-                            val startDateTime = "2023-09-10T10:00:00Z" // Set the event start time
-                            val endDateTime = "2023-09-10T11:00:00Z"   // Set the event end time
-                            GoogleSignInHelper.insertEventToGoogleCalendar(
+                            val startDateTime = "2023-09-19T10:00:00Z" // Set the event start time
+                            val endDateTime = "2023-09-19T11:00:00Z"   // Set the event end time
+                            val insertTask = InsertTask(context)
+                            insertTask.insertEventToGoogleCalendar(
                                 accessToken = GoogleSignInHelper.accesstoken ?: "",
                                 summary = title,
                                 startDateTime = startDateTime,
                                 endDateTime = endDateTime,
-                                onSuccess = { title: String ->
-                                    Log.d("CalendarIntegration", "Event inserted with Title: $title")
+                                onSuccess = { eventId ->
+                                    Log.d("CalendarIntegration", "Event inserted with ID: $eventId")
                                     onSaveTask() // Update the UI or dismiss the dialog
                                 },
-                                onError = { title: String ->
-                                    Log.e("CalendarIntegration", "Error inserting event: $title")
+                                onError = { errorCode ->
+                                    Log.e("CalendarIntegration", "Error inserting event: $errorCode")
                                     onDismiss()
                                 }
                             )

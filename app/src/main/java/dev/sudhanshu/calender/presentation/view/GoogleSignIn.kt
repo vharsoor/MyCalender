@@ -1,28 +1,26 @@
 package dev.sudhanshu.calender.presentation.view
 
-import android.app.Activity
-import dev.sudhanshu.calender.R
-
 import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
-import com.google.android.gms.auth.api.signin.*
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.calendar.Calendar
-import com.google.api.services.calendar.CalendarScopes
 import com.google.gson.annotations.SerializedName
-import retrofit2.*
+import dev.sudhanshu.calender.R
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
-import retrofit2.http.Header
 import retrofit2.http.POST
 
 class GoogleSignInHelper(private val context: Context) {
@@ -32,6 +30,7 @@ class GoogleSignInHelper(private val context: Context) {
 
     // Function to start Google Sign-In
     fun initiateGoogleSignIn(signInLauncher: ActivityResultLauncher<Intent>) {
+        Log.d("CalendarIntegration", "Inside initiateGoogleSignIn")
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             //.requestScopes(Scope("https://www.googleapis.com/auth/admin.directory.resource.calendar"))
             .requestScopes(Scope("https://www.googleapis.com/auth/calendar"))
@@ -41,10 +40,14 @@ class GoogleSignInHelper(private val context: Context) {
             .requestEmail()
             .build()
 
+        Log.d("CalendarIntegration", "Built gso : $gso")
         mGoogleSignInClient = GoogleSignIn.getClient(context, gso)
+        Log.d("CalendarIntegration", "mGoogleSignInClient : $mGoogleSignInClient")
 
         val signInIntent = mGoogleSignInClient?.signInIntent
+        Log.d("CalendarIntegration", "signInIntent : $signInIntent")
         if (signInIntent != null) {
+            Log.d("CalendarIntegration", "Launching sign in intent")
             signInLauncher.launch(signInIntent)
         }
     }
@@ -53,8 +56,9 @@ class GoogleSignInHelper(private val context: Context) {
     fun handleSignInResult(task: Task<GoogleSignInAccount>, onSuccess: (String) -> Unit, onError: (Int) -> Unit) {
         try {
             val account = task.getResult(ApiException::class.java)
-            //authenticateWithCalendarAPI(account!!)
+            Log.d("CalendarIntegration", "Got account in handleSignInResult: $account")
             val authCode = account?.serverAuthCode
+            Log.d("CalendarIntegration", "authCode: $authCode")
             if (authCode != null) {
                 Log.w("CalendarIntegration", "authCode: $authCode")
                 getRefreshToken(authCode, onSuccess, onError)
@@ -87,6 +91,7 @@ class GoogleSignInHelper(private val context: Context) {
                     val tokenResponse = response.body()
                     Log.d("CalendarIntegration", "Access Token: ${tokenResponse?.accessToken}")
                     accesstoken = tokenResponse?.accessToken
+
                     onSuccess(tokenResponse?.accessToken ?: "")
                 } else {
                     Log.e("CalendarIntegration", "Error in token response")
@@ -96,57 +101,6 @@ class GoogleSignInHelper(private val context: Context) {
 
             override fun onFailure(call: Call<GoogleTokenResponse>, t: Throwable) {
                 Log.e("CalendarIntegration", "Error fetching token: ${t.message}")
-                onError(-1)
-            }
-        })
-    }
-
-    fun insertEventToGoogleCalendar(
-        accessToken: String,
-        summary: String,
-        startDateTime: String,
-        endDateTime: String,
-        onSuccess: (String) -> Unit,
-        onError: (Int) -> Unit
-    ) {
-        Log.d("CalendarIntegration", "Inside insertEventToGoogleCalendar")
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://www.googleapis.com")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        val service = retrofit.create(CalendarService::class.java)
-
-        // Build the event details
-        val event = GoogleCalendarEvent(
-            summary = summary,
-            start = EventDateTime(dateTime = startDateTime, timeZone = "UTC"),  // Adjust timezone as needed
-            end = EventDateTime(dateTime = endDateTime, timeZone = "UTC")
-        )
-
-        // Make the API request
-        val call = service.insertEvent(
-            authorization = "Bearer $accessToken",
-            event = event
-        )
-
-        call.enqueue(object : Callback<GoogleCalendarEventResponse> {
-            override fun onResponse(
-                call: Call<GoogleCalendarEventResponse>,
-                response: Response<GoogleCalendarEventResponse>
-            ) {
-                if (response.isSuccessful) {
-                    val eventResponse = response.body()
-                    Log.d("CalendarIntegration", "Event ID: ${eventResponse?.id}")
-                    onSuccess(eventResponse?.id ?: "")
-                } else {
-                    Log.e("CalendarIntegration", "Error inserting event")
-                    onError(response.code())
-                }
-            }
-
-            override fun onFailure(call: Call<GoogleCalendarEventResponse>, t: Throwable) {
-                Log.e("CalendarIntegration", "Error: ${t.message}")
                 onError(-1)
             }
         })
@@ -166,14 +120,6 @@ class GoogleSignInHelper(private val context: Context) {
         ): Call<GoogleTokenResponse>
     }
 
-    interface CalendarService {
-        @POST("/calendar/v3/calendars/primary/events")
-        fun insertEvent(
-            @Header("Authorization") authorization: String,
-            @Body event: GoogleCalendarEvent
-        ): Call<GoogleCalendarEventResponse>
-    }
-
 
     // Data model for the Google Token Response
     data class GoogleTokenResponse(
@@ -184,27 +130,12 @@ class GoogleSignInHelper(private val context: Context) {
         @SerializedName("scope") val scope: String?
     )
 
-    data class GoogleCalendarEvent(
-        @SerializedName("summary") val summary: String,
-        @SerializedName("start") val start: EventDateTime,
-        @SerializedName("end") val end: EventDateTime
-    )
-
     data class EventDateTime(
         @SerializedName("dateTime") val dateTime: String,
         @SerializedName("timeZone") val timeZone: String
     )
 
-    data class GoogleCalendarEventResponse(
-        @SerializedName("id") val id: String,
-        @SerializedName("status") val status: String
-    )
-
-
     companion object {
-        fun insertEventToGoogleCalendar(accessToken: String, summary: String, startDateTime: String, endDateTime: String, onSuccess: Any, onError: Any) {
-
-        }
 
         private const val RC_SIGN_IN = 113
         const val REQUEST_AUTHORIZATION = 126// Any integer constant
