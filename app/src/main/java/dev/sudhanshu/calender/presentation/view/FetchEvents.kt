@@ -15,15 +15,17 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 class FetchEvents (private val context: Context){
-    fun setupCalendarRetrofit(accessToken: String): Call<List<GoogleCalendarEvent>>{
+    fun setupCalendarRetrofit(accessToken: String): Call<GoogleCalendarResponse>{
         val retrofit = Retrofit.Builder()
             .baseUrl("https://www.googleapis.com")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         val service = retrofit.create(CalendarService::class.java)
+        Log.d("Reminder","calendar service $service")
 
-        val timeMin = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT)
-        Log.d("Reminder", "setupCalendar retrofit")
+        //val timeMin = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT)
+        val timeMin = ZonedDateTime.now().minusMonths(1).format(DateTimeFormatter.ISO_INSTANT)
+        Log.d("Reminder", "setupCalendar retrofit $timeMin")
         return service.getAllEvents(
             authorization = "Bearer $accessToken",
             timeMin = timeMin
@@ -33,18 +35,19 @@ class FetchEvents (private val context: Context){
 
     fun fetchAllGoogleCalendarEvents(accessToken: String, onSuccess: (List<GoogleCalendarEvent>)->Unit, onError: (Int)->Unit){
         Log.d("Reminder", "enter fetchAllGoogleCalendarEvents $accessToken")
-        val call: Call<List<GoogleCalendarEvent>> = setupCalendarRetrofit(accessToken)
-        call.enqueue(object: Callback<List<GoogleCalendarEvent>> {
+        val call: Call<GoogleCalendarResponse> = setupCalendarRetrofit(accessToken)
+        call.enqueue(object: Callback<GoogleCalendarResponse> {
             override fun onResponse(
-                call: Call<List<GoogleCalendarEvent>>,
-                response: Response<List<GoogleCalendarEvent>>
+                call: Call<GoogleCalendarResponse>,
+                response: Response<GoogleCalendarResponse>
             ){
 
                 if(response.isSuccessful){
                     val eventResponses = response.body();
+                    Log.d("Calendar Reminder","Got the events : $eventResponses")
                     eventResponses?.let{
                         eventList->
-                        onSuccess(eventList)
+                        onSuccess(eventList.items)
                     }?: run{
                         onError(-1)
                     }
@@ -55,7 +58,7 @@ class FetchEvents (private val context: Context){
                 }
 
             }
-            override fun onFailure(call: Call<List<GoogleCalendarEvent>>, t: Throwable){
+            override fun onFailure(call: Call<GoogleCalendarResponse>, t: Throwable){
                 Log.e("Calendar Reminder", "Error: ${t.message}")
                 onError(-1)
             }
@@ -63,14 +66,18 @@ class FetchEvents (private val context: Context){
         })
     }
 
+    data class GoogleCalendarResponse(
+        val items: List<GoogleCalendarEvent>
+    )
+
     interface CalendarService{
-        @GET("/calendar/v2/calendars/primary/events")
+        @GET("/calendar/v3/calendars/primary/events")
         fun getAllEvents(
             @Header("Authorization") authorization: String,
             @Query("timeMin") timeMin: String,
             @Query("orderBy") orderBy: String = "startTime",
             @Query("singleEvents") singleEvents: Boolean = true,
-        ): Call<List<GoogleCalendarEvent>>
+        ): Call<GoogleCalendarResponse>
     }
 
 

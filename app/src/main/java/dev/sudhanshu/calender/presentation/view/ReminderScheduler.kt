@@ -14,26 +14,34 @@ class ReminderScheduler(private val context: Context){
 
     private val reminderRunnable = object: Runnable{
         override fun run(){
-            val accessToken = GoogleSignInHelper.accesstoken
+            //val accessToken = GoogleSignInHelper.accesstoken
+            val accessToken = "ya29.a0AcM612yWhndV8PSt1LuXM6Jpza3Z_MplfrWv7RSYSeO80D1vK6dgYiLpmmK5Xk2MoX3KhztalfkdqOsEVpaJ8t-TdqyzRst7cxCJlENN04I65U9QJS1F5QODpxhltnJAvk27origpz6AKiZXPeE3fjKcJzvWpwrpKhTKwIRDaCgYKAZoSARISFQHGX2Mi2JB6PIk_74-aSkLlqYSozQ0175"
+            Log.d("Reminder EventScheduler", "Fetched accesstoken : $accessToken")
             if(accessToken != null){
                 Log.d("Reminder EventScheduler", "fetching events...")
 
 
                 fetchEvents.fetchAllGoogleCalendarEvents(accessToken,
-                    onSuccess = {events ->
-                        events.forEach{
-                            event ->
-                            val eventId = event.id?:"unknown_id"
-                            val eventStart = event.start?:"unknown_start_time"
-                            if(!eventMap.containsKey(eventId)){
+                    onSuccess = { events ->
+                        events.forEach { event ->
+                            val eventId = event.id ?: "unknown_id"
+                            val eventStart = event.start?.dateTime ?: "unknown_start_time"  // Assuming `dateTime` is a property of `EventDateTime`
+
+                            if (!eventMap.containsKey(eventId)) {
                                 eventMap[eventId] = mutableMapOf()
                             }
 
-                            eventMap[eventId]?.put(eventStart as EventDateTime, event)
+                            // Add the event using the start time as the key
+                            event.start?.let { startTime ->
+                                eventMap[eventId]?.put(startTime, event)
+                            }
 
-                            eventMap.forEach{
-                                (id, start) ->
-                                Log.d("Reminder EventScheduler", "Event ID: $id, start time: $start")
+                            Log.d("Reminder EventScheduler","fetched event summary : $event.summary")
+                            // Log each event in the eventMap
+                            eventMap.forEach { (id, startTimeMap) ->
+                                startTimeMap.forEach { (start, evt) ->
+                                    Log.d("Reminder EventScheduler", "Event ID: $id, Start time: ${start.dateTime}, Event: $evt")
+                                }
                             }
                         }
                     },
