@@ -15,6 +15,7 @@ class ReminderScheduler(private val context: Context){
     private val reminderRunnable = object: Runnable{
         override fun run(){
             val accessToken = GoogleSignInHelper.accesstoken
+            Log.d("Reminder EventScheduler", "fetching accesstoken : $accessToken")
             if(accessToken != null){
                 Log.d("Reminder EventScheduler", "fetching events...")
 
