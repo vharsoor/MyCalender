@@ -2,6 +2,7 @@ package dev.sudhanshu.calender.presentation.view
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +32,8 @@ import kotlin.random.nextInt
 @AndroidEntryPoint
 class Splash : ComponentActivity() {
 
+    private var hasNavigatedToMainActivity = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -47,7 +50,11 @@ class Splash : ComponentActivity() {
                     padding.calculateTopPadding()
                     SplashScreen(onNavigation = {
                         val intent = Intent(this, MainActivity::class.java)
-                        startActivity(intent)
+                        Log.d("CalendarIntegration", "Navigating to MainActivity")
+                        if (!hasNavigatedToMainActivity) {
+                            hasNavigatedToMainActivity = true
+                            Log.d("CalendarIntegration", "Navigating to MainActivity II")
+                            startActivity(intent)}
                     }){
 
                     }

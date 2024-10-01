@@ -118,6 +118,8 @@ class MainActivity : ComponentActivity() {
         //authenticateWithGoogleSignIn()
 
         googleSignInHelper = GoogleSignInHelper(this)
+        fun googleSignInTime() {
+
 
         // Initialize the ActivityResultLauncher
         signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -129,8 +131,20 @@ class MainActivity : ComponentActivity() {
                 googleSignInHelper.handleSignInResult(task, ::onSignInSuccess, ::onSignInError)
             } else {
                 Log.e("CalendarIntegration", "Sign-in failed with resultCode: ${result.resultCode}")
+                googleSignInTime()
+            }
+
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                Log.d("CalendarIntegration", "Signed in successfully: ${account.email}")
+            } catch (e: ApiException) {
+                Log.e("CalendarIntegration", "Sign-in failed with error: ${e.statusCode}")
+                Log.e("CalendarIntegration", "Error details: ${e.localizedMessage}")
             }
         }
+
+        googleSignInHelper.initiateGoogleSignIn(signInLauncher) }
 
         // Start Google Sign-In
         //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
@@ -147,7 +161,8 @@ class MainActivity : ComponentActivity() {
         } else {
             // No refresh token available, initiate Google Sign-In
             Log.d("CalendarIntegration", "Logging in for the first time")
-            googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+            //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+            googleSignInTime()
         }
 
     }
@@ -233,7 +248,7 @@ class MainActivity : ComponentActivity() {
         // Check if the app has both read and write permissions for Google Calendar
         val readPermission = checkSelfPermission(android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
         val writePermission = checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
-        Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
+        //Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
         return readPermission && writePermission
     }
 
