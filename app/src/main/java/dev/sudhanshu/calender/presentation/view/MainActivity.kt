@@ -134,6 +134,13 @@ class MainActivity : ComponentActivity() {
         googleSignInHelper.initiateGoogleSignIn(signInLauncher)
         Log.d("Reminder", "Call getRetrofitInstance")
 
+
+
+    }
+
+    private fun onSignInSuccess(accessToken: String) {
+        Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
+        // Proceed with your app logic
         val reminderScheduler = ReminderScheduler(this)
         reminderScheduler.startTracking()
         CoroutineScope(Dispatchers.Main).launch{
@@ -141,12 +148,6 @@ class MainActivity : ComponentActivity() {
             reminderScheduler.stopTracking()
             Log.d("Reminder EventScheduler", "Fetching events stopped after 2 minutes")
         }
-
-    }
-
-    private fun onSignInSuccess(accessToken: String) {
-        Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
-        // Proceed with your app logic
     }
 
     // Callback when sign-in fails
