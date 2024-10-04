@@ -27,9 +27,12 @@ import dev.sudhanshu.calender.R
 import dev.sudhanshu.calender.util.SettingsPreferences
 import kotlin.random.Random
 import kotlin.random.nextInt
+import android.util.Log
 
 @AndroidEntryPoint
 class Splash : ComponentActivity() {
+
+    private var hasNavigatedToMainActivity = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +50,11 @@ class Splash : ComponentActivity() {
                     padding.calculateTopPadding()
                     SplashScreen(onNavigation = {
                         val intent = Intent(this, MainActivity::class.java)
-                        startActivity(intent)
+                        Log.d("CalendarIntegration", "Navigating to MainActivity")
+                        if (!hasNavigatedToMainActivity) {
+                            hasNavigatedToMainActivity = true
+                            Log.d("CalendarIntegration", "Navigating to MainActivity II")
+                            startActivity(intent)}
                     }){
 
                     }

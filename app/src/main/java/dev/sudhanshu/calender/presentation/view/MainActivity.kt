@@ -118,25 +118,69 @@ class MainActivity : ComponentActivity() {
         //authenticateWithGoogleSignIn()
         googleSignInHelper = GoogleSignInHelper(this)
 
-        // Initialize the ActivityResultLauncher
-        signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val data = result.data
-            if (result.resultCode == RESULT_OK && data != null) {
-                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-                googleSignInHelper.handleSignInResult(task, ::onSignInSuccess, ::onSignInError)
-            } else {
-                Log.e("CalendarIntegration", "Sign-in failed with resultCode: ${result.resultCode}")
-            }
+        fun googleSignInTime() {
+
+            // Initialize the ActivityResultLauncher
+            signInLauncher =
+                registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    val data = result.data
+                    Log.d("CalendarIntegration", "Sign-in result code: ${result.resultCode}")
+                    if (result.resultCode == RESULT_OK && data != null) {
+                        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                        Log.d("CalendarIntegration", "Result ok and Sign-in task: $task")
+                        googleSignInHelper.handleSignInResult(
+                            task,
+                            ::onSignInSuccess,
+                            ::onSignInError
+                        )
+                    } else {
+                        Log.e(
+                            "CalendarIntegration",
+                            "Sign-in failed with resultCode: ${result.resultCode}"
+                        )
+                        googleSignInTime()
+                    }
+                    val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                    try {
+                        val account = task.getResult(ApiException::class.java)
+                        Log.d("CalendarIntegration", "Signed in successfully: ${account.email}")
+                    } catch (e: ApiException) {
+                        Log.e("CalendarIntegration", "Sign-in failed with error: ${e.statusCode}")
+                        Log.e("CalendarIntegration", "Error details: ${e.localizedMessage}")
+                    }
+                }
+
+            googleSignInHelper.initiateGoogleSignIn(signInLauncher)
         }
 
-        // Start Google Sign-In
-        googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+        val refreshToken = googleSignInHelper.loadRefreshToken()
+
+        if (refreshToken != null) {
+            // Use the refresh token to get a new access token
+            Log.d("CalendarIntegration", "Refresh token available, will get new access token $refreshToken")
+            googleSignInHelper.getNewAccessTokenFromRefreshToken(
+                refreshToken,
+                ::onSignInSuccess,
+                ::onSignInError
+            )
+        } else {
+            // No refresh token available, initiate Google Sign-In
+            Log.d("CalendarIntegration", "Logging in for the first time")
+            //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+            googleSignInTime()
+        }
 
     }
 
     private fun onSignInSuccess(accessToken: String) {
         Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
-        // Proceed with your app logic
+        val reminderScheduler = ReminderScheduler(this)
+        reminderScheduler.startTracking()
+        CoroutineScope(Dispatchers.Main).launch{
+            delay(2*60*1000)
+            reminderScheduler.stopTracking()
+            Log.d("Reminder EventScheduler", "Fetching events stopped after 2 minutes")
+        }
     }
 
     // Callback when sign-in fails
@@ -214,7 +258,7 @@ class MainActivity : ComponentActivity() {
         // Check if the app has both read and write permissions for Google Calendar
         val readPermission = checkSelfPermission(android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
         val writePermission = checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
-        Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
+        //Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
         return readPermission && writePermission
     }
 

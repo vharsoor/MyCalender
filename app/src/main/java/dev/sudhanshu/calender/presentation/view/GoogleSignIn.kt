@@ -1,5 +1,6 @@
 package dev.sudhanshu.calender.presentation.view
 
+import android.app.Activity
 import dev.sudhanshu.calender.R
 
 import android.content.Context
@@ -13,28 +14,38 @@ import com.google.android.gms.tasks.Task
 import com.google.gson.annotations.SerializedName
 import retrofit2.*
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.Header
 import retrofit2.http.POST
+
+private const val PREFS_NAME = "GoogleSignInPrefs"
+private const val REFRESH_TOKEN_KEY = "refresh_token"
 
 class GoogleSignInHelper(private val context: Context) {
 
     private var mGoogleSignInClient: GoogleSignInClient? = null
 
+
     // Function to start Google Sign-In
     fun initiateGoogleSignIn(signInLauncher: ActivityResultLauncher<Intent>) {
+        Log.d("CalendarIntegration", "Inside initiateGoogleSignIn")
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            //.requestScopes(Scope("https://www.googleapis.com/auth/admin.directory.resource.calendar"))
             .requestScopes(Scope("https://www.googleapis.com/auth/calendar"))
             .requestIdToken(context.getString(R.string.web_client_id))
             .requestServerAuthCode(context.getString(R.string.web_client_id))
             .requestEmail()
             .build()
 
+        Log.d("CalendarIntegration", "Built gso : $gso")
         mGoogleSignInClient = GoogleSignIn.getClient(context, gso)
+        Log.d("CalendarIntegration", "mGoogleSignInClient : $mGoogleSignInClient")
 
         val signInIntent = mGoogleSignInClient?.signInIntent
+        Log.d("CalendarIntegration", "signInIntent : $signInIntent")
         if (signInIntent != null) {
+            Log.d("CalendarIntegration", "Launching sign in intent")
             signInLauncher.launch(signInIntent)
         }
     }
@@ -43,21 +54,23 @@ class GoogleSignInHelper(private val context: Context) {
     fun handleSignInResult(task: Task<GoogleSignInAccount>, onSuccess: (String) -> Unit, onError: (Int) -> Unit) {
         try {
             val account = task.getResult(ApiException::class.java)
+            Log.d("CalendarIntegration", "Got account in handleSignInResult: $account")
             val authCode = account?.serverAuthCode
+            Log.d("CalendarIntegration", "authCode: $authCode")
             if (authCode != null) {
-                Log.w("GoogleSignInHelper", "authCode: $authCode")
-                getRefreshToken(authCode, onSuccess, onError)
+                Log.w("CalendarIntegration", "authCode: $authCode")
+                getAccessToken(authCode, onSuccess, onError)
             }
         } catch (e: ApiException) {
             onError(e.statusCode)
-            Log.e("GoogleSignInHelper", "signInResult:failed code=${e.statusCode}")
+            Log.e("CalendarIntegration", "signInResult:failed code=${e.statusCode}")
         }
     }
 
     // Get the refresh token using the authCode
-    private fun getRefreshToken(authCode: String, onSuccess: (String) -> Unit, onError: (Int) -> Unit) {
+    private fun getAccessToken(authCode: String, onSuccess: (String) -> Unit, onError: (Int) -> Unit) {
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://oauth2.googleapis.com")
+            .baseUrl("https://oauth2.googleapis.com?access_type=offline?prompt=consent")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
@@ -68,26 +81,97 @@ class GoogleSignInHelper(private val context: Context) {
             clientSecret = context.getString(R.string.client_secret),
             redirectUri = "",
             grantType = "authorization_code"
+            //access_type = "offline",
+            //prompt = "consent"
         )
 
         call.enqueue(object : Callback<GoogleTokenResponse> {
             override fun onResponse(call: Call<GoogleTokenResponse>, response: Response<GoogleTokenResponse>) {
                 if (response.isSuccessful) {
                     val tokenResponse = response.body()
-                    Log.d("GoogleSignInHelper", "Access Token: ${tokenResponse?.accessToken}")
+                    Log.d("CalendarIntegration", "Access Token: ${tokenResponse?.accessToken}")
+                    accesstoken = tokenResponse?.accessToken
+                    saveRefreshToken(tokenResponse?.refreshToken ?: "")
+                    Log.d("CalendarIntegration", "Refresh Token: ${tokenResponse?.refreshToken}")
                     onSuccess(tokenResponse?.accessToken ?: "")
                 } else {
-                    Log.e("GoogleSignInHelper", "Error in token response")
+                    Log.e("CalendarIntegration", "Error in token response")
                     onError(response.code())
                 }
             }
 
             override fun onFailure(call: Call<GoogleTokenResponse>, t: Throwable) {
-                Log.e("GoogleSignInHelper", "Error fetching token: ${t.message}")
+                Log.e("CalendarIntegration", "Error fetching token: ${t.message}")
                 onError(-1)
             }
         })
     }
+
+    // Function to save refresh token securely
+    fun saveRefreshToken(refreshToken: String) {
+        val sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        with(sharedPreferences.edit()) {
+            putString(REFRESH_TOKEN_KEY, refreshToken)
+            apply()
+        }
+    }
+
+    // Function to load refresh token
+    fun loadRefreshToken(): String? {
+        val sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return sharedPreferences.getString(REFRESH_TOKEN_KEY, null)
+    }
+
+    fun clearRefreshToken() {
+        val sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        with(sharedPreferences.edit()) {
+            remove(REFRESH_TOKEN_KEY)
+            apply()
+        }
+    }
+
+    fun getNewAccessTokenFromRefreshToken(
+        refreshToken: String,
+        onSuccess: (String) -> Unit,
+        onError: (Int) -> Unit
+    ) {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://oauth2.googleapis.com")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        Log.d("CalendarIntegration", "Retrofit instance created $retrofit")
+        val service = retrofit.create(OAuthService::class.java)
+        Log.d("CalendarIntegration", "Service instance created $service")
+        val call = service.refreshToken(
+            refreshToken = refreshToken,
+            clientId = context.getString(R.string.web_client_id),
+            clientSecret = context.getString(R.string.client_secret),
+            grantType = "refresh_token"
+        )
+        Log.d("CalendarIntegration", "Call instance created $call")
+
+        call.enqueue(object : Callback<GoogleTokenResponse> {
+            override fun onResponse(call: Call<GoogleTokenResponse>, response: Response<GoogleTokenResponse>) {
+                if (response.isSuccessful) {
+                    val tokenResponse = response.body()
+                    Log.d("CalendarIntegration", "New Access Token: ${tokenResponse?.accessToken}")
+                    accesstoken = tokenResponse?.accessToken
+                    onSuccess(tokenResponse?.accessToken ?: "")
+                } else {
+                    Log.e("CalendarIntegration", "Error in token response")
+                    onError(response.code())
+                }
+            }
+
+            override fun onFailure(call: Call<GoogleTokenResponse>, t: Throwable) {
+                Log.e("CalendarIntegration", "Error fetching token: ${t.message}")
+                onError(-1)
+            }
+        })
+    }
+
+
 
     // Define the OAuth service interface for token exchange
     interface OAuthService {
@@ -100,7 +184,17 @@ class GoogleSignInHelper(private val context: Context) {
             @Field("redirect_uri") redirectUri: String,
             @Field("grant_type") grantType: String
         ): Call<GoogleTokenResponse>
+
+        @FormUrlEncoded
+        @POST("/token")
+        fun refreshToken(
+            @Field("refresh_token") refreshToken: String,
+            @Field("client_id") clientId: String,
+            @Field("client_secret") clientSecret: String,
+            @Field("grant_type") grantType: String
+        ): Call<GoogleTokenResponse>
     }
+
 
     // Data model for the Google Token Response
     data class GoogleTokenResponse(
@@ -110,4 +204,19 @@ class GoogleSignInHelper(private val context: Context) {
         @SerializedName("refresh_token") val refreshToken: String?,
         @SerializedName("scope") val scope: String?
     )
+
+    data class EventDateTime(
+        @SerializedName("dateTime") val dateTime: String,
+        @SerializedName("timeZone") val timeZone: String
+    )
+
+    companion object {
+
+        private const val RC_SIGN_IN = 113
+        const val REQUEST_AUTHORIZATION = 126// Any integer constant
+        //var mGoogleSignInClient: GoogleSignInClient? = null
+        var accesstoken: String? = null
+
+
+    }
 }
