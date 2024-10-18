@@ -66,6 +66,7 @@ class FetchEvents (private val context: Context){
         })
     }
 
+
     data class GoogleCalendarResponse(
         val items: List<GoogleCalendarEvent>
     )

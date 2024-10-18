@@ -112,7 +112,7 @@ dependencies {
     // google font
     implementation(libs.androidx.ui.text.google.fonts)
 
-    implementation("androidx.core:core-ktx:1.9.0")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
@@ -133,5 +133,6 @@ dependencies {
     implementation("com.google.apis:google-api-services-calendar:v3-rev411-1.25.0") {
         exclude(group = "org.apache.httpcomponents", module = "httpclient")
     }
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
 
 }

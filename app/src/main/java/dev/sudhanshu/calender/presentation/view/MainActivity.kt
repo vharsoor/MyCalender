@@ -1,9 +1,14 @@
 package dev.sudhanshu.calender.presentation.view
 
-import android.app.admin.DevicePolicyManager
+import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -15,12 +20,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import java.util.*
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,12 +50,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dev.sudhanshu.calender.R
 import dev.sudhanshu.calender.presentation.ui.theme.CalenderTheme
 import dev.sudhanshu.calender.presentation.ui.theme.Typography
-import dev.sudhanshu.calender.presentation.viewmodel.TaskViewModel
 import dev.sudhanshu.calender.util.SettingsPreferences
 import java.time.LocalDate
 import java.time.LocalTime
@@ -55,19 +61,20 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.tasks.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
+
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -78,6 +85,7 @@ class MainActivity : ComponentActivity() {
     private val coroutineScope = CoroutineScope(Dispatchers.Main + job)
     private lateinit var googleSignInHelper: GoogleSignInHelper
     private lateinit var signInLauncher: ActivityResultLauncher<Intent>
+    private var eventServer: EventServer? = null
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,9 +102,11 @@ class MainActivity : ComponentActivity() {
                     CalendarApp(settingsPreferences.getUserId())
                 }
             }
+//
+
         }
 
-        startScreenPinning()
+//        startScreenPinning()
 
 
         coroutineScope.launch(Dispatchers.Main) {
@@ -114,8 +124,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Authenticate with Google Sign-In
-        //authenticateWithGoogleSignIn()
 
         googleSignInHelper = GoogleSignInHelper(this)
 
@@ -130,14 +138,52 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Start Google Sign-In
+//         Start Google Sign-In
         googleSignInHelper.initiateGoogleSignIn(signInLauncher)
         Log.d("Reminder", "Call getRetrofitInstance")
 
+        val currentTime = LocalDateTime.now()
+        val scheduleTime = EventDateTime(dateTime = currentTime.plusMinutes(3).toString(), timeZone = ZonedDateTime.now().toString())
+        val scheduleEndTime = EventDateTime(dateTime = currentTime.plusMinutes(10).toString(), timeZone = ZonedDateTime.now().toString())
+        Log.d("Notification", "scheduleTime $scheduleTime")
+        val calendarEvent = GoogleCalendarEvent(
+            id = "54321",
+            start = scheduleTime,
+            summary = "test event",
+            end = scheduleEndTime
+        )
 
 
+        val notificationHelper = NotificationHelper(this)
+        notificationHelper.scheduleNotification(calendarEvent)
+
+        eventServer = EventServer(8443)
+        try{
+            eventServer?.start()
+            Log.d("Notification", "Event server started on port 8443")
+        }
+        catch(e: Exception){
+            e.printStackTrace()
+        }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        eventServer?.stop()
+    }
+    // sdk > 12 requires requesting alarm permission at runtime
+    fun requestAlarmPermission(){
+        AlertDialog.Builder(this)
+            .setTitle("Request Exact Alarm Permission")
+            .setMessage("This app needs permission to schedule exact alarms. Please grant permission")
+            .setPositiveButton("Open Settings"){
+                    _,_ ->
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
     private fun onSignInSuccess(accessToken: String) {
         Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
         // Proceed with your app logic
@@ -238,6 +284,9 @@ class MainActivity : ComponentActivity() {
 
 
 }
+
+
+
 
 
 
