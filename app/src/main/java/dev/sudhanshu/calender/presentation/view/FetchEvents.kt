@@ -3,6 +3,7 @@ package dev.sudhanshu.calender.presentation.view
 import android.content.Context
 import retrofit2.Call
 import android.util.Log
+import kotlinx.coroutines.suspendCancellableCoroutine
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.Callback
@@ -12,6 +13,8 @@ import retrofit2.http.Header
 import retrofit2.http.Query
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class FetchEvents (private val context: Context){
     fun setupCalendarRetrofit(accessToken: String): Call<GoogleCalendarResponse>{
@@ -64,6 +67,40 @@ class FetchEvents (private val context: Context){
 
         })
     }
+    suspend fun fetchEventsFromCloud(accessToken: String, eventMap: MutableMap<String, Event>): Unit =
+        suspendCancellableCoroutine { continuation ->
+            if (accessToken != null) {
+
+                Log.d("Reminder EventScheduler", "Start Fetching...")
+                fetchAllGoogleCalendarEvents(
+                    accessToken,
+                    onSuccess = { response ->
+                        response.forEach { event ->
+                            val eventId = event.id ?: "unknown_id"
+                            val eventStart = event.start?.dateTime ?: "unknown_start_time"  // Assuming `dateTime` is a property of `EventDateTime`
+                            val eventSummary = event.summary ?: "No Summary"
+                            Log.d("Reminder EventScheduler", ">>Event ID: $eventId, Start time: $eventStart, Summary: $eventSummary")
+
+                            if (!eventMap.containsKey(eventId)) {
+                                val newEvent = Event(eventId = eventId, eventName = eventSummary, eventStart = eventStart)
+                                eventMap[eventId] = newEvent
+                            }
+                        }
+                        // Resume the coroutine successfully
+                        continuation.resume(Unit)
+                    },
+                    onError = { errorCode ->
+                        Log.e("Reminder EventScheduler", "Error fetching events: Error code: $errorCode")
+                        // Resume with an exception on error
+                        continuation.resumeWithException(Exception("Error fetching events: $errorCode"))
+                    }
+                )
+
+            } else {
+                // If myAccessToken is null, resume with an exception
+                continuation.resumeWithException(IllegalStateException("Access token is null"))
+            }
+        }
 
     data class GoogleCalendarResponse(
         val items: List<GoogleCalendarEvent>
