@@ -1,10 +1,7 @@
 package dev.sudhanshu.calender.presentation.view
 
 import android.util.Log
-import com.google.api.client.util.DateTime
 import com.google.gson.annotations.SerializedName
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException

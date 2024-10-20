@@ -1,14 +1,9 @@
 package dev.sudhanshu.calender.presentation.view
 
-import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.RingtoneManager
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -50,10 +45,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dev.sudhanshu.calender.R
 import dev.sudhanshu.calender.presentation.ui.theme.CalenderTheme
 import dev.sudhanshu.calender.presentation.ui.theme.Typography
+import dev.sudhanshu.calender.presentation.viewmodel.TaskViewModel
 import dev.sudhanshu.calender.util.SettingsPreferences
 import java.time.LocalDate
 import java.time.LocalTime
@@ -61,6 +58,13 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.tasks.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -70,7 +74,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
@@ -104,11 +107,9 @@ class MainActivity : ComponentActivity() {
                     CalendarApp(settingsPreferences.getUserId())
                 }
             }
-//
-
         }
 
-//        startScreenPinning()
+        startScreenPinning()
 
 
         coroutineScope.launch(Dispatchers.Main) {
@@ -126,49 +127,61 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-
+        // Authenticate with Google Sign-In
+        //authenticateWithGoogleSignIn()
         googleSignInHelper = GoogleSignInHelper(this)
 
-        // Initialize the ActivityResultLauncher
-        signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val data = result.data
-            if (result.resultCode == RESULT_OK && data != null) {
-                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-                googleSignInHelper.handleSignInResult(task, ::onSignInSuccess, ::onSignInError)
-            } else {
-                Log.e("CalendarIntegration", "Sign-in failed with resultCode: ${result.resultCode}")
-            }
+        fun googleSignInTime() {
+
+            // Initialize the ActivityResultLauncher
+            signInLauncher =
+                registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                    val data = result.data
+                    Log.d("CalendarIntegration", "Sign-in result code: ${result.resultCode}")
+                    if (result.resultCode == RESULT_OK && data != null) {
+                        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                        Log.d("CalendarIntegration", "Result ok and Sign-in task: $task")
+                        googleSignInHelper.handleSignInResult(
+                            task,
+                            ::onSignInSuccess,
+                            ::onSignInError
+                        )
+                    } else {
+                        Log.e(
+                            "CalendarIntegration",
+                            "Sign-in failed with resultCode: ${result.resultCode}"
+                        )
+                        googleSignInTime()
+                    }
+                    val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                    try {
+                        val account = task.getResult(ApiException::class.java)
+                        Log.d("CalendarIntegration", "Signed in successfully: ${account.email}")
+                    } catch (e: ApiException) {
+                        Log.e("CalendarIntegration", "Sign-in failed with error: ${e.statusCode}")
+                        Log.e("CalendarIntegration", "Error details: ${e.localizedMessage}")
+                    }
+                }
+
+            googleSignInHelper.initiateGoogleSignIn(signInLauncher)
         }
 
-//         Start Google Sign-In
-        googleSignInHelper.initiateGoogleSignIn(signInLauncher)
-        Log.d("Reminder", "Call getRetrofitInstance")
+        val refreshToken = googleSignInHelper.loadRefreshToken()
 
-        val currentTime = LocalDateTime.now()
-        val scheduleTime = EventDateTime(dateTime = currentTime.plusMinutes(3).toString(), timeZone = ZonedDateTime.now().toString())
-        val scheduleEndTime = EventDateTime(dateTime = currentTime.plusMinutes(10).toString(), timeZone = ZonedDateTime.now().toString())
-        Log.d("Notification", "scheduleTime $scheduleTime")
-        val calendarEvent = GoogleCalendarEvent(
-            id = "54321",
-            start = scheduleTime,
-            summary = "test event",
-            end = scheduleEndTime
-        )
-
-
-//        val notificationHelper = NotificationHelper(this)
-//        notificationHelper.scheduleNotification(calendarEvent)
-//
-//        eventServer = EventServer(8443)
-//        try{
-//            eventServer?.start()
-//            Log.d("Notification", "Event server started on port 8443")
-//        }
-//        catch(e: Exception){
-//            e.printStackTrace()
-//        }
-
-
+        if (refreshToken != null) {
+            // Use the refresh token to get a new access token
+            Log.d("CalendarIntegration", "Refresh token available, will get new access token $refreshToken")
+            googleSignInHelper.getNewAccessTokenFromRefreshToken(
+                refreshToken,
+                ::onSignInSuccess,
+                ::onSignInError
+            )
+        } else {
+            // No refresh token available, initiate Google Sign-In
+            Log.d("CalendarIntegration", "Logging in for the first time")
+            //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+            googleSignInTime()
+        }
 
     }
 
@@ -257,6 +270,7 @@ class MainActivity : ComponentActivity() {
         CalendarApp(settingsPreferences.getUserId())
     }
 
+
     @Composable
     private fun SetStatusBarColor(color: Color = MaterialTheme.colors.background) {
         window.statusBarColor = color.toArgb()
@@ -290,6 +304,7 @@ class MainActivity : ComponentActivity() {
         return true // Replace with actual condition
     }
 
+
     private fun stopScreenPinning() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             // Launch the custom PIN verification activity
@@ -298,6 +313,7 @@ class MainActivity : ComponentActivity() {
             startActivity(intent)
         }
     }
+
 
     private fun hasCalendarPermission(): Boolean {
         // Check if the app has both read and write permissions for Google Calendar
@@ -309,7 +325,6 @@ class MainActivity : ComponentActivity() {
 
     private fun requestCalendarPermission() {
         // Request both read and write permissions for Google Calendar
-        Log.d("CalendarIntegration", "requestCalendarPermission")
         requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR), 2)
         //requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR),REQUEST_CALENDAR_ACCESS)
     }
