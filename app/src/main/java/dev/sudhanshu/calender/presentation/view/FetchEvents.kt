@@ -3,6 +3,7 @@ package dev.sudhanshu.calender.presentation.view
 import android.content.Context
 import retrofit2.Call
 import android.util.Log
+import kotlinx.coroutines.suspendCancellableCoroutine
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.Callback
@@ -13,6 +14,8 @@ import retrofit2.http.Header
 import retrofit2.http.Query
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class FetchEvents (private val context: Context){
     fun setupCalendarRetrofit(accessToken: String): Call<GoogleCalendarResponse>{
@@ -45,9 +48,14 @@ class FetchEvents (private val context: Context){
                 if(response.isSuccessful){
                     val eventResponses = response.body();
                     Log.d("Calendar Reminder","Got the events : $eventResponses")
-                    eventResponses?.let{
-                        eventList->
-                        onSuccess(eventList.items)
+                    eventResponses?.let{ googleCalendarResponse->
+                        val events = googleCalendarResponse.items
+                        if(events!=null){
+                            onSuccess(events)
+                        }
+                        else{
+                            onError(-1)
+                        }
                     }?: run{
                         onError(-1)
                     }
@@ -66,21 +74,60 @@ class FetchEvents (private val context: Context){
         })
     }
 
+    suspend fun fetchEventsFromCloud(
+        myAccessToken: String,
+        eventMap: MutableMap<String, Event>
+    ): Unit = suspendCancellableCoroutine { continuation ->
+        if (myAccessToken.isNotEmpty()) {
+            Log.d("Reminder EventScheduler", "Start Fetching...")
+            fetchAllGoogleCalendarEvents(
+                myAccessToken,
+                onSuccess = { response ->
+                    response.forEach { event ->
+                        val eventId = event.id ?: "unknown_id"
+                        val eventStart = event.start?.dateTime ?: "unknown_start_time"
+                        val eventSummary = event.summary ?: "No Summary"
+                        Log.d(
+                            "Reminder EventScheduler",
+                            ">>Event ID: $eventId, Start time: $eventStart, Summary: $eventSummary"
+                        )
 
-    data class GoogleCalendarResponse(
-        val items: List<GoogleCalendarEvent>
-    )
-
-    interface CalendarService{
-        @GET("/calendar/v3/calendars/primary/events")
-        fun getAllEvents(
-            @Header("Authorization") authorization: String,
-            @Query("timeMin") timeMin: String,
-            @Query("orderBy") orderBy: String = "startTime",
-            @Query("singleEvents") singleEvents: Boolean = true,
-        ): Call<GoogleCalendarResponse>
+                        if (!eventMap.containsKey(eventId)) {
+                            val newEvent = Event(
+                                eventId = eventId,
+                                eventName = eventSummary,
+                                eventStart = eventStart
+                            )
+                            eventMap[eventId] = newEvent
+                        }
+                    }
+                    // Resume the coroutine successfully
+                    continuation.resume(Unit)
+                },
+                onError = { errorCode ->
+                    Log.e("Reminder EventScheduler", "Error fetching events: Error code: $errorCode")
+                    continuation.resumeWithException(Exception("Error fetching events: $errorCode"))
+                }
+            )
+        } else {
+            // If myAccessToken is null, resume with an exception
+            continuation.resumeWithException(IllegalStateException("Access token is null"))
+        }
     }
-
-
 }
 
+
+
+data class GoogleCalendarResponse(
+    val items: List<GoogleCalendarEvent>
+)
+
+interface CalendarService{
+    @GET("/calendar/v3/calendars/primary/events")
+    fun getAllEvents(
+        @Header("Authorization") authorization: String,
+        @Query("timeMin") timeMin: String,
+        @Query("orderBy") orderBy: String = "startTime",
+        @Query("singleEvents") singleEvents: Boolean = true,
+    ): Call<GoogleCalendarResponse>
+}

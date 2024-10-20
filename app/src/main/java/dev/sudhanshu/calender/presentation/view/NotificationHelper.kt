@@ -40,9 +40,6 @@ class NotificationHelper (private val context: Context){
     }
 
     fun scheduleNotification(calendarEvent: GoogleCalendarEvent){
-
-
-
         val startTime = calendarEvent.start.dateTime
         val timeZone = calendarEvent.start.timeZone
         val title = calendarEvent.summary

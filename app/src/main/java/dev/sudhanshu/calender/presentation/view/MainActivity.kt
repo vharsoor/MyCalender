@@ -71,9 +71,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
-
+import kotlin.coroutines.resumeWithException
 
 
 @AndroidEntryPoint
@@ -86,6 +87,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var googleSignInHelper: GoogleSignInHelper
     private lateinit var signInLauncher: ActivityResultLauncher<Intent>
     private var eventServer: EventServer? = null
+    var myAccessToken: String? = null
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -154,17 +156,20 @@ class MainActivity : ComponentActivity() {
         )
 
 
-        val notificationHelper = NotificationHelper(this)
-        notificationHelper.scheduleNotification(calendarEvent)
+//        val notificationHelper = NotificationHelper(this)
+//        notificationHelper.scheduleNotification(calendarEvent)
+//
+//        eventServer = EventServer(8443)
+//        try{
+//            eventServer?.start()
+//            Log.d("Notification", "Event server started on port 8443")
+//        }
+//        catch(e: Exception){
+//            e.printStackTrace()
+//        }
 
-        eventServer = EventServer(8443)
-        try{
-            eventServer?.start()
-            Log.d("Notification", "Event server started on port 8443")
-        }
-        catch(e: Exception){
-            e.printStackTrace()
-        }
+
+
     }
 
     override fun onDestroy() {
@@ -186,14 +191,44 @@ class MainActivity : ComponentActivity() {
     }
     private fun onSignInSuccess(accessToken: String) {
         Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
+        myAccessToken = accessToken
+        Log.d("Reminder", "myAccessToken: $myAccessToken")
         // Proceed with your app logic
-        val reminderScheduler = ReminderScheduler(this)
-        reminderScheduler.startTracking()
-        CoroutineScope(Dispatchers.Main).launch{
-            delay(2*60*1000)
-            reminderScheduler.stopTracking()
-            Log.d("Reminder EventScheduler", "Fetching events stopped after 2 minutes")
+//        val reminderScheduler = ReminderScheduler(this)
+//        reminderScheduler.startTracking()
+//        CoroutineScope(Dispatchers.Main).launch{
+//            delay(2*60*1000)
+//            reminderScheduler.stopTracking()
+//            Log.d("Reminder EventScheduler", "Fetching events stopped after 2 minutes")
+//        }
+
+        Log.d("Reminder", "accessToken = $myAccessToken")
+        val eventMap: MutableMap<String, Event> = mutableMapOf()
+
+
+        Log.d("Notification", "building db")
+        val db = DatabaseProvider.getDatabase(this)
+        val eventDao = db.eventDao()
+        Log.d("Notification", "db is built")
+        val fetchEvents = FetchEvents(this);
+        CoroutineScope(Dispatchers.IO).launch {
+            val result1 = withContext(Dispatchers.IO){
+
+                fetchEvents.fetchEventsFromCloud(accessToken, eventMap)
+            }
+            Log.d("Notification", "fetch event from cloud: $result1")
+            val result2 = withContext(Dispatchers.IO){
+                fetchAllEventFromDB(eventMap, eventDao)
+                fetchEventFromDB(eventMap, eventDao)
+                fetchNextEventFromDB(eventDao)
+                deleteAllEventsFromDB(eventDao)
+            }
+
         }
+
+
+
+
     }
 
     // Callback when sign-in fails
@@ -221,7 +256,6 @@ class MainActivity : ComponentActivity() {
     fun CalenderPrev(){
         CalendarApp(settingsPreferences.getUserId())
     }
-
 
     @Composable
     private fun SetStatusBarColor(color: Color = MaterialTheme.colors.background) {
@@ -256,7 +290,6 @@ class MainActivity : ComponentActivity() {
         return true // Replace with actual condition
     }
 
-
     private fun stopScreenPinning() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             // Launch the custom PIN verification activity
@@ -265,7 +298,6 @@ class MainActivity : ComponentActivity() {
             startActivity(intent)
         }
     }
-
 
     private fun hasCalendarPermission(): Boolean {
         // Check if the app has both read and write permissions for Google Calendar
@@ -280,6 +312,49 @@ class MainActivity : ComponentActivity() {
         Log.d("CalendarIntegration", "requestCalendarPermission")
         requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR), 2)
         //requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR),REQUEST_CALENDAR_ACCESS)
+    }
+
+    private suspend fun fetchEventFromDB(eventMap: MutableMap<String, Event>, eventDao: EventDao){
+        eventMap.forEach { (eventId, event) ->
+
+            val eventById = eventDao.findEventById(eventId)
+            if (eventById != null) {
+                Log.d("EventSearch", "get event by id: " + eventById.toString())
+            } else {
+                Log.d("EventSearch", "Event not found.")
+            }
+        }
+    }
+
+    private suspend fun fetchAllEventFromDB(eventMap: MutableMap<String, Event>, eventDao: EventDao){
+        eventMap.forEach { (eventId, event) ->
+            eventDao.insertAll(event)
+        }
+        val allEvents = eventDao.getAll()
+        if (allEvents.isNotEmpty()) {
+            Log.d("EventSearch", "all events: " + allEvents.toString())
+        } else {
+            Log.d("EventSearch", "No events found.")
+        }
+    }
+    private suspend fun fetchNextEventFromDB(eventDao: EventDao){
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+        dateFormat.timeZone = TimeZone.getTimeZone("MST")
+        val currentTime = dateFormat.format(System.currentTimeMillis())
+        Log.d("Notification", "currentTime $currentTime")
+        val nextEvent = eventDao.getNextEvent(currentTime)
+        if(nextEvent != null){
+            Log.d("EventSearch", "Next event: ${nextEvent.eventName}, Start time: ${nextEvent.eventStart}")
+        }
+        else{
+            Log.d("EventSearch", "No upcoming events found")
+        }
+    }
+    private suspend fun deleteAllEventsFromDB(eventDao: EventDao){
+        val allEvents = eventDao.getAll()
+        allEvents.forEach{event->
+            eventDao.delete(event)
+        }
     }
 
 

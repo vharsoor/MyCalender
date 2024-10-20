@@ -58,6 +58,7 @@ class ReminderScheduler(private val context: Context){
             handler.postDelayed(this, intervalMillis) // this == runnable
         }
     }
+
     fun startTracking(){
         handler.post(reminderRunnable)
     }
