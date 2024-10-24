@@ -20,7 +20,7 @@ import androidx.core.content.ContextCompat
 
 class NotificationHelper (private val context: Context){
 
-    private val channelID = "123"
+    private val channelID = "be908f56-a08e-4de3-8bbc-734c73e066fa"
     private val channelName = "MyChannel"
 
     init{

@@ -30,7 +30,7 @@ class NotificationReceiver : BroadcastReceiver(){
             Log.e("NotificationReceiver", "NotificationManager is null")
             return
         }
-        val channelID = "123"
+        val channelID = "be908f56-a08e-4de3-8bbc-734c73e066fa"
 
         val existingChannels = notificationManager.notificationChannels
         existingChannels.forEach{channel->Log.d("Notification",

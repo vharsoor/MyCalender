@@ -3,6 +3,7 @@ package dev.sudhanshu.calender.presentation.view
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.setContent
@@ -91,6 +92,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var signInLauncher: ActivityResultLauncher<Intent>
     private var eventServer: EventServer? = null
     var myAccessToken: String? = null
+    private lateinit var lockScreenReceiver: LockScreenReceiver
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -176,12 +178,27 @@ class MainActivity : ComponentActivity() {
                 ::onSignInSuccess,
                 ::onSignInError
             )
+            Log.d("LockScreen", "Register Lockscreen Receiver")
+            lockScreenReceiver = LockScreenReceiver()
+            val filter = IntentFilter().apply{
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(lockScreenReceiver, filter)
         } else {
             // No refresh token available, initiate Google Sign-In
             Log.d("CalendarIntegration", "Logging in for the first time")
             //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+            Log.d("LockScreen", "Register Lockscreen Receiver")
+            lockScreenReceiver = LockScreenReceiver()
+            val filter = IntentFilter().apply{
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(lockScreenReceiver, filter)
             googleSignInTime()
         }
+
 
     }
 
@@ -214,6 +231,7 @@ class MainActivity : ComponentActivity() {
 //            reminderScheduler.stopTracking()
 //            Log.d("Reminder EventScheduler", "Fetching events stopped after 2 minutes")
 //        }
+//        val notificationHelper = NotificationHelper(this);
 
         Log.d("Reminder", "accessToken = $myAccessToken")
         val eventMap: MutableMap<String, Event> = mutableMapOf()

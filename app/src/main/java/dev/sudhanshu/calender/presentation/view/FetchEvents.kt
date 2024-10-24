@@ -11,12 +11,24 @@ import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Query
+import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class FetchEvents (private val context: Context){
+
+    fun getCurrentTimeRFC3339(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+        dateFormat.timeZone = TimeZone.getTimeZone("MST")
+        Log.d("EventSearch", "currentTime: ${dateFormat.format(Date())}")
+        return dateFormat.format(Date())
+    }
+
     fun setupCalendarRetrofit(accessToken: String): Call<GoogleCalendarResponse>{
         val retrofit = Retrofit.Builder()
             .baseUrl("https://www.googleapis.com")
@@ -25,12 +37,12 @@ class FetchEvents (private val context: Context){
         val service = retrofit.create(CalendarService::class.java)
         Log.d("Reminder","calendar service $service")
 
-        //val timeMin = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT)
-        val timeMin = ZonedDateTime.now().minusMonths(1).format(DateTimeFormatter.ISO_INSTANT)
-        Log.d("Reminder", "setupCalendar retrofit $timeMin")
+
+        Log.d("Reminder", "setupCalendar retrofit ${getCurrentTimeRFC3339()}")
         return service.getAllEvents(
             authorization = "Bearer $accessToken",
-            timeMin = timeMin
+            timeMin = getCurrentTimeRFC3339(),
+            orderBy = "startTime"
         )
 
     }
@@ -106,6 +118,7 @@ class FetchEvents (private val context: Context){
         val items: List<GoogleCalendarEvent>
     )
 
+
     interface CalendarService{
         @GET("/calendar/v3/calendars/primary/events")
         fun getAllEvents(
@@ -114,6 +127,7 @@ class FetchEvents (private val context: Context){
             @Query("orderBy") orderBy: String = "startTime",
             @Query("singleEvents") singleEvents: Boolean = true,
         ): Call<GoogleCalendarResponse>
+
     }
 
 
