@@ -1,5 +1,6 @@
 package dev.sudhanshu.calender.presentation.view
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
@@ -73,13 +74,19 @@ import kotlinx.coroutines.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import kotlin.coroutines.resumeWithException
-
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import java.net.HttpURLConnection
+import java.net.URL
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -113,6 +120,8 @@ class MainActivity : ComponentActivity() {
 
         startScreenPinning()
 
+        //val messagingService = MyFirebaseMessagingService()
+        //messagingService.regenerateToken()
 
         coroutineScope.launch(Dispatchers.Main) {
 
@@ -170,6 +179,7 @@ class MainActivity : ComponentActivity() {
 
         val refreshToken = googleSignInHelper.loadRefreshToken()
 
+
         if (refreshToken != null) {
             // Use the refresh token to get a new access token
             Log.d("CalendarIntegration", "Refresh token available, will get new access token $refreshToken")
@@ -199,6 +209,14 @@ class MainActivity : ComponentActivity() {
             googleSignInTime()
         }
 
+
+
+        FirebaseMessaging.getInstance().subscribeToTopic("event_notifications")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("MainActivity", "Subscribed to topic successfully.")
+                }
+            }
 
     }
 
@@ -707,3 +725,7 @@ class PinVerificationActivity : AppCompatActivity() {
         return enteredPin == storedPin
     }
 }
+
+
+
+

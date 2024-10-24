@@ -43,6 +43,13 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Calender">
         </activity>
+        <service
+            android:name=".presentation.view.MyFirebaseMessagingService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <activity
             android:name=".presentation.view.PinVerificationActivity"
             android:theme="@style/Theme.AppCompat.Light"/>
