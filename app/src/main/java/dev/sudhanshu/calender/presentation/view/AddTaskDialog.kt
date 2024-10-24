@@ -27,7 +27,22 @@ import dev.sudhanshu.calender.data.model.Task
 import dev.sudhanshu.calender.data.model.TaskModel
 import dev.sudhanshu.calender.domain.model.TaskRequest
 import dev.sudhanshu.calender.presentation.viewmodel.TaskViewModel
+import com.google.api.client.util.DateTime
+import com.google.api.services.calendar.Calendar
+import com.google.api.services.calendar.model.Event
+import com.google.api.services.calendar.model.EventDateTime
+import java.lang.Exception
+import android.util.Log
+import dev.sudhanshu.calender.presentation.view.GoogleSignInHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+//val signInClient = GoogleSignInHelper.googleCalendarClient
 
+
+private val job = Job()
+private val coroutineScope = CoroutineScope(Dispatchers.Main + job)
 
 @Composable
 fun AddTaskDialog(
@@ -41,6 +56,7 @@ fun AddTaskDialog(
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     Dialog(onDismissRequest = { onDismiss() }) {
         Card(
@@ -100,6 +116,26 @@ fun AddTaskDialog(
                             }, onError = {
                                 onDismiss()
                             })
+                            //addEvent(title, date)
+                            val startDateTime = "2023-09-19T10:00:00Z" // Set the event start time
+                            val endDateTime = "2023-09-19T11:00:00Z"   // Set the event end time
+                            val insertTask = InsertTask(context)
+                            insertTask.insertEventToGoogleCalendar(
+                                accessToken = GoogleSignInHelper.accesstoken ?: "",
+                                summary = title,
+                                startDateTime = startDateTime,
+                                endDateTime = endDateTime,
+                                onSuccess = { eventId ->
+                                    Log.d("CalendarIntegration", "Event inserted with ID: $eventId")
+                                    onSaveTask() // Update the UI or dismiss the dialog
+                                },
+                                onError = { errorCode ->
+                                    Log.e("CalendarIntegration", "Error inserting event: $errorCode")
+                                    onDismiss()
+                                }
+                            )
+                            Log.d("CalendarIntegration","Time : $date : $time")
+
                         }
                     ) {
                         Text(text = "Save")
@@ -109,7 +145,4 @@ fun AddTaskDialog(
         }
     }
 }
-
-
-
 

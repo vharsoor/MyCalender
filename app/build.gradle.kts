@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
     id("com.google.gms.google-services")
 }
 
@@ -12,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.sudhanshu.calender"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -106,7 +107,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Lifecycle components
-    implementation(libs.androidx.lifecycle.runtime.ktx.v282)
+    //implementation(libs.androidx.lifecycle.runtime.ktx.v282)
 
     // View model
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -114,7 +115,7 @@ dependencies {
     // google font
     implementation(libs.androidx.ui.text.google.fonts)
 
-    implementation("androidx.core:core-ktx:1.9.0")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
@@ -127,10 +128,24 @@ dependencies {
     //Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
     implementation("com.google.android.gms:play-services-auth:21.0.0")
+    implementation("com.google.api-client:google-api-client-android:1.32.1")    {
+        exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    }
+    implementation("com.google.apis:google-api-services-calendar:v3-rev411-1.25.0") {
+        exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    }
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
+
+    val room_version = "2.6.1"
+
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    annotationProcessor("androidx.room:room-compiler:$room_version")
+
+    // To use Kotlin annotation processing tool (kapt)
+    kapt("androidx.room:room-compiler:$room_version")
 
     implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-analytics")
