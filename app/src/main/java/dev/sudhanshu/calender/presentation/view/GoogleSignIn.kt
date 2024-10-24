@@ -1,24 +1,37 @@
 package dev.sudhanshu.calender.presentation.view
 
+import android.Manifest
 import android.app.Activity
 import dev.sudhanshu.calender.R
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.annotations.SerializedName
 import retrofit2.*
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import dev.sudhanshu.calender.presentation.view.GoogleSignInHelper.Companion.calendarID
+import java.net.HttpURLConnection
+import java.net.URL
+
 
 private const val PREFS_NAME = "GoogleSignInPrefs"
 private const val REFRESH_TOKEN_KEY = "refresh_token"
@@ -93,6 +106,7 @@ class GoogleSignInHelper(private val context: Context) {
                     accesstoken = tokenResponse?.accessToken
                     saveRefreshToken(tokenResponse?.refreshToken ?: "")
                     Log.d("CalendarIntegration", "Refresh Token: ${tokenResponse?.refreshToken}")
+                    fetchPrimaryCalendarId("${tokenResponse?.accessToken}")
                     onSuccess(tokenResponse?.accessToken ?: "")
                 } else {
                     Log.e("CalendarIntegration", "Error in token response")
@@ -171,6 +185,44 @@ class GoogleSignInHelper(private val context: Context) {
         })
     }
 
+    fun fetchPrimaryCalendarId(accessToken: String?) {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://www.googleapis.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val calendarService = retrofit.create(CalendarService::class.java)
+        Log.d("FCM Token","access : $accesstoken")
+
+        // Make API call to fetch the calendar list
+        val call = calendarService.getCalendarList("Bearer $accesstoken")
+        call.enqueue(object : Callback<CalendarListResponse> {
+            override fun onResponse(
+                call: Call<CalendarListResponse>,
+                response: Response<CalendarListResponse>
+            ) {
+                if (response.isSuccessful) {
+                    val calendarList = response.body()
+                    val primaryCalendar = calendarList?.items?.find { it.primary }
+                    primaryCalendar?.let {
+                        Log.d("FCM Token", "Primary calendar ID: ${it.id}")
+                        calendarID = it.id
+                        val myFirebaseMessagingService = MyFirebaseMessagingService()
+                        Log.d("FCM Token", "Calling in between the calendar and token")
+                        myFirebaseMessagingService.sendTokenToServer(MyFirebaseMessagingService.fcmtoken, "$calendarID")
+                    } ?: Log.d("FCM Token", "Primary calendar not found")
+                } else {
+                    Log.d("FCM Token", "Failed to fetch calendars: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<CalendarListResponse>, t: Throwable) {
+                Log.d("FCM Token", "Failed to fetch calendars: ${t.message}")
+            }
+        })
+
+    }
+
 
 
     // Define the OAuth service interface for token exchange
@@ -195,6 +247,22 @@ class GoogleSignInHelper(private val context: Context) {
         ): Call<GoogleTokenResponse>
     }
 
+    interface CalendarService {
+        @GET("calendar/v3/users/me/calendarList")
+        fun getCalendarList(
+            @Header("Authorization") authHeader: String
+        ): Call<CalendarListResponse>
+    }
+
+    data class CalendarListResponse(
+        val items: List<CalendarListEntry>
+    )
+
+    data class CalendarListEntry(
+        val id: String,
+        val summary: String,
+        val primary: Boolean
+    )
 
     // Data model for the Google Token Response
     data class GoogleTokenResponse(
@@ -216,7 +284,113 @@ class GoogleSignInHelper(private val context: Context) {
         const val REQUEST_AUTHORIZATION = 126// Any integer constant
         //var mGoogleSignInClient: GoogleSignInClient? = null
         var accesstoken: String? = null
+        var calendarID: String=""
+
+    }
+}
 
 
+class MyFirebaseMessagingService : FirebaseMessagingService() {
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        Log.d("FCM Token", "New token: $token")
+        fcmtoken = token
+        // Send the new token to your backend
+        //sendTokenToServer(token)
+    }
+
+    fun sendTokenToServer(token: String, calendarId: String) {
+        val url = URL("https://backend.stresswatch.net/save-token")  // Replace with your server URL
+
+        // Create a new thread to send the token asynchronously
+        Thread {
+            try {
+                // Open connection to the server
+                val urlConnection = url.openConnection() as HttpURLConnection
+
+                // Set up the request
+                urlConnection.requestMethod = "POST"
+                urlConnection.setRequestProperty("Content-Type", "application/json")
+                urlConnection.doOutput = true
+
+                // Create the JSON payload
+
+                val jsonToken = "{\"calendarID\": \"${calendarID}\", \"fcm_token\": \"$token\"}"
+
+                // Write the token to the output stream
+                val outputStream = urlConnection.outputStream
+                outputStream.write(jsonToken.toByteArray())
+                outputStream.flush()
+                outputStream.close()
+
+                // Get the response from the server
+                val responseCode = urlConnection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    Log.d("FCM Token", "Token sent successfully")
+                } else {
+                    Log.e("FCM Token", "Failed to send token: $responseCode")
+                }
+
+                urlConnection.disconnect()
+            } catch (e: Exception) {
+                Log.e("FCM Token", "Error sending token: ${e.message}")
+            }
+        }.start()
+    }
+
+
+    // Optional: Manually regenerate token if needed
+    fun regenerateToken() {
+        FirebaseMessaging.getInstance().deleteToken().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                FirebaseMessaging.getInstance().token.addOnCompleteListener { newTask ->
+                    if (newTask.isSuccessful) {
+                        val newToken = newTask.result
+                        Log.d("FCM Token", "Regenerated token: $newToken")
+                        //sendTokenToServer(newToken)
+                    }
+                }
+            } else {
+                Log.e("FCM Token", "Failed to delete old token", task.exception)
+            }
+        }
+    }
+
+    override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        remoteMessage.notification?.let {
+            showNotification(it.title, it.body)
+            Log.d("Firebase","Got a notification")
+        }
+    }
+
+    private fun showNotification(title: String?, message: String?) {
+        val notificationBuilder = NotificationCompat.Builder(this, "default_channel")
+            .setContentTitle(title)
+            .setContentText(message)
+            .setSmallIcon(R.drawable.logo)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        val notificationManager = NotificationManagerCompat.from(this)
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        notificationManager.notify(0, notificationBuilder.build())
+    }
+
+    companion object {
+
+        var fcmtoken: String = ""
     }
 }
