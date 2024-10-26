@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
     var myAccessToken: String? = null
     private lateinit var lockScreenReceiver: LockScreenReceiver
 
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -132,6 +133,7 @@ class MainActivity : ComponentActivity() {
         // Authenticate with Google Sign-In
         //authenticateWithGoogleSignIn()
         googleSignInHelper = GoogleSignInHelper(this)
+
 
         fun googleSignInTime() {
 
@@ -189,18 +191,12 @@ class MainActivity : ComponentActivity() {
             // No refresh token available, initiate Google Sign-In
             Log.d("CalendarIntegration", "Logging in for the first time")
             //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
-            Log.d("LockScreen", "Register Lockscreen Receiver")
-            lockScreenReceiver = LockScreenReceiver()
-            val filter = IntentFilter().apply{
-                addAction(Intent.ACTION_USER_PRESENT)
-                addAction(Intent.ACTION_SCREEN_OFF)
-            }
-            registerReceiver(lockScreenReceiver, filter)
+
             googleSignInTime()
         }
+        Log.d("LockScreen", "Outside of GoogleSignInTime")
 
-
-    }
+    } // OnCreate
 
     override fun onDestroy() {
         super.onDestroy()

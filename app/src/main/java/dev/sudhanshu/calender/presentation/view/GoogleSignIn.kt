@@ -216,7 +216,5 @@ class GoogleSignInHelper(private val context: Context) {
         const val REQUEST_AUTHORIZATION = 126// Any integer constant
         //var mGoogleSignInClient: GoogleSignInClient? = null
         var accesstoken: String? = null
-
-
     }
 }
