@@ -1,5 +1,6 @@
 package dev.sudhanshu.calender.presentation.view
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
@@ -73,13 +74,15 @@ import kotlinx.coroutines.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
-import kotlin.coroutines.resumeWithException
 
+import java.text.SimpleDateFormat
+
+import androidx.core.app.NotificationManagerCompat
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import java.net.HttpURLConnection
+import java.net.URL
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -93,7 +96,6 @@ class MainActivity : ComponentActivity() {
     private var eventServer: EventServer? = null
     var myAccessToken: String? = null
     private lateinit var lockScreenReceiver: LockScreenReceiver
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,6 +116,8 @@ class MainActivity : ComponentActivity() {
 
         startScreenPinning()
 
+        //val messagingService = MyFirebaseMessagingService()
+        //messagingService.regenerateToken()
 
         coroutineScope.launch(Dispatchers.Main) {
 
@@ -133,7 +137,6 @@ class MainActivity : ComponentActivity() {
         // Authenticate with Google Sign-In
         //authenticateWithGoogleSignIn()
         googleSignInHelper = GoogleSignInHelper(this)
-
 
         fun googleSignInTime() {
 
@@ -196,7 +199,16 @@ class MainActivity : ComponentActivity() {
         }
         Log.d("LockScreen", "Outside of GoogleSignInTime")
 
-    } // OnCreate
+
+
+        FirebaseMessaging.getInstance().subscribeToTopic("event_notifications")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("MainActivity", "Subscribed to topic successfully.")
+                }
+            }
+
+    }
 
     override fun onDestroy() {
         super.onDestroy()
@@ -703,3 +715,7 @@ class PinVerificationActivity : AppCompatActivity() {
         return enteredPin == storedPin
     }
 }
+
+
+
+
