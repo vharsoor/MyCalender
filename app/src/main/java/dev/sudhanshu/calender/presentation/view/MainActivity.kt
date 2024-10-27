@@ -74,13 +74,9 @@ import kotlinx.coroutines.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
+
 import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
-import kotlin.coroutines.resumeWithException
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
+
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -179,7 +175,6 @@ class MainActivity : ComponentActivity() {
 
         val refreshToken = googleSignInHelper.loadRefreshToken()
 
-
         if (refreshToken != null) {
             // Use the refresh token to get a new access token
             Log.d("CalendarIntegration", "Refresh token available, will get new access token $refreshToken")
@@ -199,15 +194,10 @@ class MainActivity : ComponentActivity() {
             // No refresh token available, initiate Google Sign-In
             Log.d("CalendarIntegration", "Logging in for the first time")
             //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
-            Log.d("LockScreen", "Register Lockscreen Receiver")
-            lockScreenReceiver = LockScreenReceiver()
-            val filter = IntentFilter().apply{
-                addAction(Intent.ACTION_USER_PRESENT)
-                addAction(Intent.ACTION_SCREEN_OFF)
-            }
-            registerReceiver(lockScreenReceiver, filter)
+
             googleSignInTime()
         }
+        Log.d("LockScreen", "Outside of GoogleSignInTime")
 
 
 
