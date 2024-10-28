@@ -338,8 +338,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
         }.start()
     }
-    }
-}
+
+
 
 
     // Optional: Manually regenerate token if needed

@@ -175,6 +175,14 @@ class MainActivity : ComponentActivity() {
 
         val refreshToken = googleSignInHelper.loadRefreshToken()
 
+        Log.d("LockScreen", "Register Lockscreen Receiver")
+        lockScreenReceiver = LockScreenReceiver()
+        val filter = IntentFilter().apply{
+            addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(lockScreenReceiver, filter)
+
         if (refreshToken != null) {
             // Use the refresh token to get a new access token
             Log.d("CalendarIntegration", "Refresh token available, will get new access token $refreshToken")
@@ -183,13 +191,9 @@ class MainActivity : ComponentActivity() {
                 ::onSignInSuccess,
                 ::onSignInError
             )
-            Log.d("LockScreen", "Register Lockscreen Receiver")
-            lockScreenReceiver = LockScreenReceiver()
-            val filter = IntentFilter().apply{
-                addAction(Intent.ACTION_USER_PRESENT)
-                addAction(Intent.ACTION_SCREEN_OFF)
-            }
-            registerReceiver(lockScreenReceiver, filter)
+
+
+
         } else {
             // No refresh token available, initiate Google Sign-In
             Log.d("CalendarIntegration", "Logging in for the first time")
