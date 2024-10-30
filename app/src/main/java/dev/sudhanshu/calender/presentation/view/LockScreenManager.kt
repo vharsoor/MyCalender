@@ -14,14 +14,16 @@ class LockScreenReceiver: BroadcastReceiver(){
 
     override fun onReceive(context: Context, intent: Intent) {
 
+        val activity = context as? MainActivity
+
         when(intent.action){
             Intent.ACTION_SCREEN_OFF -> {
                 Log.d("LockScreenReceiver", "Screen Locked!")
-
+                //activity?.stopLockTask()
             }
             Intent.ACTION_USER_PRESENT -> {
                 Log.d("LockScreenReceiver", "Screen unlocked!")
-                // GoogleSignIn get access token
+                //activity?.startLockTask()
                 val googleSignInUnlock = GoogleSignInUnlock(context)
                 googleSignInUnlock.checkRefreshToken()
             }

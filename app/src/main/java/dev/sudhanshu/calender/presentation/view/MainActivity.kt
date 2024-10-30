@@ -123,20 +123,6 @@ class MainActivity : ComponentActivity() {
         //val messagingService = MyFirebaseMessagingService()
         //messagingService.regenerateToken()
 
-        coroutineScope.launch(Dispatchers.Main) {
-
-            // Request Google Calendar permission after notification permission is granted
-            if (!hasCalendarPermission()) {
-                // If not, request the user to grant calendar permission
-                Log.d("CalendarIntegration", "No calendar permission, will request one")
-                requestCalendarPermission()
-
-                // Wait for the calendar permission result
-                while (!hasCalendarPermission()) {
-                    delay(1000) // Delay for 1 second before checking again
-                }
-            }
-        }
 
         // Authenticate with Google Sign-In
         //authenticateWithGoogleSignIn()
@@ -252,31 +238,6 @@ class MainActivity : ComponentActivity() {
 //        val notificationHelper = NotificationHelper(this);
 
         Log.d("Reminder", "accessToken = $myAccessToken")
-        val eventMap: MutableMap<String, Event> = mutableMapOf()
-
-
-        Log.d("Notification", "building db")
-        val db = DatabaseProvider.getDatabase(this)
-        val eventDao = db.eventDao()
-        Log.d("Notification", "db is built")
-        val fetchEvents = FetchEvents(this);
-        CoroutineScope(Dispatchers.IO).launch {
-            val result1 = withContext(Dispatchers.IO){
-
-                fetchEvents.fetchEventsFromCloud(accessToken, eventMap)
-            }
-            Log.d("Notification", "fetch event from cloud: $result1")
-            val result2 = withContext(Dispatchers.IO){
-                fetchAllEventFromDB(eventMap, eventDao)
-                fetchEventFromDB(eventMap, eventDao)
-                fetchNextEventFromDB(eventDao)
-                deleteAllEventsFromDB(eventDao)
-            }
-
-        }
-
-
-
 
     }
 
@@ -286,7 +247,7 @@ class MainActivity : ComponentActivity() {
         // Handle error cases accordingly
     }
 
-    private fun startScreenPinning() {
+    fun startScreenPinning() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             //val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
             //if (devicePolicyManager.isLockTaskPermitted(packageName)) {
@@ -341,7 +302,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private fun stopScreenPinning() {
+    fun stopScreenPinning() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             // Launch the custom PIN verification activity
             Log.d("Vishrut","Enterted stopScreenPinning")
@@ -349,65 +310,6 @@ class MainActivity : ComponentActivity() {
             startActivity(intent)
         }
     }
-
-
-    private fun hasCalendarPermission(): Boolean {
-        // Check if the app has both read and write permissions for Google Calendar
-        val readPermission = checkSelfPermission(android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
-        val writePermission = checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
-        Log.d("CalendarIntegration", "readPermission=$readPermission and writePermission=$writePermission")
-        return readPermission && writePermission
-    }
-
-    private fun requestCalendarPermission() {
-        // Request both read and write permissions for Google Calendar
-        requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR), 2)
-        //requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR),REQUEST_CALENDAR_ACCESS)
-    }
-
-    private suspend fun fetchEventFromDB(eventMap: MutableMap<String, Event>, eventDao: EventDao){
-        eventMap.forEach { (eventId, event) ->
-
-            val eventById = eventDao.findEventById(eventId)
-            if (eventById != null) {
-                Log.d("EventSearch", "get event by id: " + eventById.toString())
-            } else {
-                Log.d("EventSearch", "Event not found.")
-            }
-        }
-    }
-
-    private suspend fun fetchAllEventFromDB(eventMap: MutableMap<String, Event>, eventDao: EventDao){
-        eventMap.forEach { (eventId, event) ->
-            eventDao.insertAll(event)
-        }
-        val allEvents = eventDao.getAll()
-        if (allEvents.isNotEmpty()) {
-            Log.d("EventSearch", "all events: " + allEvents.toString())
-        } else {
-            Log.d("EventSearch", "No events found.")
-        }
-    }
-    private suspend fun fetchNextEventFromDB(eventDao: EventDao){
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
-        dateFormat.timeZone = TimeZone.getTimeZone("MST")
-        val currentTime = dateFormat.format(System.currentTimeMillis())
-        Log.d("Notification", "currentTime $currentTime")
-        val nextEvent = eventDao.getNextEvent(currentTime)
-        if(nextEvent != null){
-            Log.d("EventSearch", "Next event: ${nextEvent.eventName}, Start time: ${nextEvent.eventStart}")
-        }
-        else{
-            Log.d("EventSearch", "No upcoming events found")
-        }
-    }
-    private suspend fun deleteAllEventsFromDB(eventDao: EventDao){
-        val allEvents = eventDao.getAll()
-        allEvents.forEach{event->
-            eventDao.delete(event)
-        }
-    }
-
 
 }
 

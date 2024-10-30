@@ -28,9 +28,17 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dev.sudhanshu.calender.presentation.view.GoogleSignInHelper.Companion.accesstoken
 import dev.sudhanshu.calender.presentation.view.GoogleSignInHelper.Companion.calendarID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 
 private const val PREFS_NAME = "GoogleSignInPrefs"
@@ -364,6 +372,60 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             showNotification(it.title, it.body)
             Log.d("Firebase","Got a notification")
         }
+
+        val googleSignInHelper = GoogleSignInHelper(this)
+        val refreshToken = googleSignInHelper.loadRefreshToken()
+        if (refreshToken != null) {
+            googleSignInHelper.getNewAccessTokenFromRefreshToken(
+                refreshToken = refreshToken,
+                onSuccess = ::onSignInSuccess,
+                onError = ::onSignInError
+            )
+
+            fun onSignInSuccess(accessToken: String) {}
+            fun onSignInError(errorCode: Int) {
+                Log.e("CalendarIntegration", "Sign-in failed with error code: $errorCode")
+                // Handle error cases accordingly
+            }
+        }
+
+//        val googleSignInUnlock = GoogleSignInUnlock(this)
+//        googleSignInUnlock.checkRefreshToken()
+
+        val eventMap: MutableMap<String, Event> = mutableMapOf()
+
+
+        Log.d("Notification", "building db")
+        val db = DatabaseProvider.getDatabase(this)
+        val eventDao = db.eventDao()
+        Log.d("Notification", "db is built")
+        val fetchEvents = FetchEvents(this);
+        CoroutineScope(Dispatchers.IO).launch {
+            val result1 = withContext(Dispatchers.IO){
+
+                fetchEvents.fetchEventsFromCloud("$accesstoken", eventMap)
+            }
+            Log.d("Notification", "fetch event from cloud: $result1")
+            val result2 = withContext(Dispatchers.IO){
+                fetchAllEventFromDB(eventMap, eventDao)
+                fetchEventFromDB(eventMap, eventDao)
+                fetchNextEventFromDB(eventDao)
+                deleteAllEventsFromDB(eventDao)
+            }
+
+        }
+
+    }
+
+    fun onSignInSuccess(newAccessToken: String) {
+        // Use the new access token as needed
+        Log.d("CalendarIntegration", "Successfully retrieved new access token: $newAccessToken")
+        // Store the new access token or use it in subsequent API requests
+    }
+
+    fun onSignInError(errorCode: Int) {
+        // Handle errors, e.g., display an error message or take corrective action
+        Log.e("CalendarIntegration", "Failed to retrieve new access token. Error code: $errorCode")
     }
 
     private fun showNotification(title: String?, message: String?) {
@@ -389,6 +451,49 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
         notificationManager.notify(0, notificationBuilder.build())
+    }
+
+    private suspend fun fetchEventFromDB(eventMap: MutableMap<String, Event>, eventDao: EventDao){
+        eventMap.forEach { (eventId, event) ->
+
+            val eventById = eventDao.findEventById(eventId)
+            if (eventById != null) {
+                Log.d("EventSearch", "get event by id: " + eventById.toString())
+            } else {
+                Log.d("EventSearch", "Event not found.")
+            }
+        }
+    }
+
+    private suspend fun fetchAllEventFromDB(eventMap: MutableMap<String, Event>, eventDao: EventDao){
+        eventMap.forEach { (eventId, event) ->
+            eventDao.insertAll(event)
+        }
+        val allEvents = eventDao.getAll()
+        if (allEvents.isNotEmpty()) {
+            Log.d("EventSearch", "all events: " + allEvents.toString())
+        } else {
+            Log.d("EventSearch", "No events found.")
+        }
+    }
+    private suspend fun fetchNextEventFromDB(eventDao: EventDao){
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+        dateFormat.timeZone = TimeZone.getTimeZone("MST")
+        val currentTime = dateFormat.format(System.currentTimeMillis())
+        Log.d("Notification", "currentTime $currentTime")
+        val nextEvent = eventDao.getNextEvent(currentTime)
+        if(nextEvent != null){
+            Log.d("EventSearch", "Next event: ${nextEvent.eventName}, Start time: ${nextEvent.eventStart}")
+        }
+        else{
+            Log.d("EventSearch", "No upcoming events found")
+        }
+    }
+    private suspend fun deleteAllEventsFromDB(eventDao: EventDao){
+        val allEvents = eventDao.getAll()
+        allEvents.forEach{event->
+            eventDao.delete(event)
+        }
     }
 
     companion object {
