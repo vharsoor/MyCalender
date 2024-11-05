@@ -46,8 +46,8 @@ class InsertTask(private val context: Context) {
         // Build the event details
         val event = GoogleCalendarEvent(
             summary = summary,
-            start = EventDateTime(dateTime = startDateTime, timeZone = "UTC"),  // Adjust timezone as needed
-            end = EventDateTime(dateTime = endDateTime, timeZone = "UTC")
+            start = EventDateTime(dateTime = startDateTime, timeZone = "MST"),  // Adjust timezone as needed
+            end = EventDateTime(dateTime = endDateTime, timeZone = "MST")
         )
 
         // Make the API request
