@@ -2,11 +2,14 @@ package dev.sudhanshu.calender.presentation.view
 
 import android.Manifest
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import dev.sudhanshu.calender.R
 
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.app.ActivityCompat
@@ -16,6 +19,7 @@ import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.annotations.SerializedName
 import retrofit2.*
@@ -367,6 +371,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         remoteMessage.notification?.let {
             showNotification(it.title, it.body)
@@ -400,6 +405,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val eventDao = db.eventDao()
         Log.d("Notification", "db is built")
         val fetchEvents = FetchEvents(this);
+        val eventScheduler = EventScheduler()
         CoroutineScope(Dispatchers.IO).launch {
             val result1 = withContext(Dispatchers.IO){
 
@@ -415,7 +421,27 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         }
 
+        CoroutineScope(Dispatchers.Main).launch {
+            eventScheduler.fetchAndScheduleAllReminders(context = this@MyFirebaseMessagingService,"$accesstoken")
+        }
+
     }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "service_channel_id",
+                "Foreground Service Channel",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Channel for Foreground Service Notifications"
+            }
+
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+
 
     fun onSignInSuccess(newAccessToken: String) {
         // Use the new access token as needed
@@ -441,13 +467,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+
             return
         }
         notificationManager.notify(0, notificationBuilder.build())

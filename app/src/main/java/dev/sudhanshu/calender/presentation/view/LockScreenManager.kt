@@ -24,8 +24,8 @@ class LockScreenReceiver: BroadcastReceiver(){
             Intent.ACTION_USER_PRESENT -> {
                 Log.d("LockScreenReceiver", "Screen unlocked!")
                 //activity?.startLockTask()
-                val googleSignInUnlock = GoogleSignInUnlock(context)
-                googleSignInUnlock.checkRefreshToken()
+                //val googleSignInUnlock = GoogleSignInUnlock(context)
+                //googleSignInUnlock.checkRefreshToken()
             }
         }
     }

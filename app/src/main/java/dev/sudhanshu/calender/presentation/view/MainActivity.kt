@@ -2,6 +2,7 @@ package dev.sudhanshu.calender.presentation.view
 
 import android.Manifest
 import android.app.admin.DevicePolicyManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -74,6 +75,9 @@ import kotlinx.coroutines.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHost
+import androidx.compose.material.SnackbarHostState
 import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -82,6 +86,8 @@ import kotlin.coroutines.resumeWithException
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -101,28 +107,60 @@ class MainActivity : ComponentActivity() {
     var myAccessToken: String? = null
     private lateinit var lockScreenReceiver: LockScreenReceiver
 
+    private lateinit var snackbarHostState: SnackbarHostState
+
+    private val reminderReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Log.d("Reminder", "Main Received reminder broadcast")
+            val eventTitle = intent.getStringExtra("eventTitle")
+            eventTitle?.let {
+                lifecycleScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Reminder: $eventTitle is starting soon!",
+                        actionLabel = "✖", // Add cross mark as the action label
+                        duration = SnackbarDuration.Indefinite
+                    )
+                }
+            }
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
          settingsPreferences = SettingsPreferences.getInstance(this)
 
+        startScreenPinning()
+
+        snackbarHostState = SnackbarHostState() // Initialize the class property
 
         setContent {
             CalenderTheme {
                 SetStatusBarColor()
-                Scaffold (Modifier.background(MaterialTheme.colors.background)){ padding ->
+
+                Scaffold(
+                    modifier = Modifier.background(MaterialTheme.colors.background),
+                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                ) { padding ->
                     padding.calculateTopPadding()
                     CalendarApp(settingsPreferences.getUserId())
+
                 }
             }
         }
 
-        startScreenPinning()
+        val filter = IntentFilter("dev.sudhanshu.calender.REMINDER_EVENT")
+        LocalBroadcastManager.getInstance(this).registerReceiver(reminderReceiver, filter)
+
 
         //val messagingService = MyFirebaseMessagingService()
         //messagingService.regenerateToken()
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+            }
+        }
 
         // Authenticate with Google Sign-In
         //authenticateWithGoogleSignIn()
@@ -195,8 +233,6 @@ class MainActivity : ComponentActivity() {
             googleSignInTime()
         }
 
-
-
         FirebaseMessaging.getInstance().subscribeToTopic("event_notifications")
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -206,36 +242,17 @@ class MainActivity : ComponentActivity() {
 
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
         eventServer?.stop()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(reminderReceiver)
     }
-    // sdk > 12 requires requesting alarm permission at runtime
-    fun requestAlarmPermission(){
-        AlertDialog.Builder(this)
-            .setTitle("Request Exact Alarm Permission")
-            .setMessage("This app needs permission to schedule exact alarms. Please grant permission")
-            .setPositiveButton("Open Settings"){
-                    _,_ ->
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                startActivity(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
+
     private fun onSignInSuccess(accessToken: String) {
         Log.d("CalendarIntegration", "Sign-in success with access token: $accessToken")
         myAccessToken = accessToken
         Log.d("Reminder", "myAccessToken: $myAccessToken")
-        // Proceed with your app logic
-//        val reminderScheduler = ReminderScheduler(this)
-//        reminderScheduler.startTracking()
-//        CoroutineScope(Dispatchers.Main).launch{
-//            delay(2*60*1000)
-//            reminderScheduler.stopTracking()
-//            Log.d("Reminder EventScheduler", "Fetching events stopped after 2 minutes")
-//        }
-//        val notificationHelper = NotificationHelper(this);
 
         Log.d("Reminder", "accessToken = $myAccessToken")
 
@@ -312,10 +329,6 @@ class MainActivity : ComponentActivity() {
     }
 
 }
-
-
-
-
 
 
 @RequiresApi(Build.VERSION_CODES.O)

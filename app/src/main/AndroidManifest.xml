@@ -55,6 +55,13 @@
             android:theme="@style/Theme.AppCompat.Light"/>
         <receiver android:name=".presentation.view.NotificationReceiver"
             andriod:enabled="true" />
+        <receiver android:name=".presentation.view.EventScheduler"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="dev.sudhanshu.calender.REMINDER_EVENT" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
