@@ -58,6 +58,7 @@ class GoogleSignInHelper(private val context: Context) {
         Log.d("CalendarIntegration", "Inside initiateGoogleSignIn")
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestScopes(Scope("https://www.googleapis.com/auth/calendar"))
+            .requestScopes(Scope("https://www.googleapis.com/auth/contacts"))
             .requestIdToken(context.getString(R.string.web_client_id))
             .requestServerAuthCode(context.getString(R.string.web_client_id))
             .requestEmail()

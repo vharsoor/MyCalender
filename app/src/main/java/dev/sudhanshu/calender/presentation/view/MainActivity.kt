@@ -94,6 +94,9 @@ import com.google.firebase.messaging.RemoteMessage
 import java.net.HttpURLConnection
 import java.net.URL
 
+import dev.sudhanshu.calender.presentation.view.AddContactScreen
+
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -145,6 +148,7 @@ class MainActivity : ComponentActivity() {
                 ) { padding ->
                     padding.calculateTopPadding()
                     CalendarApp(settingsPreferences.getUserId())
+                    AddContactScreen()
 
                 }
             }
