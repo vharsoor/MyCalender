@@ -2,15 +2,18 @@ package dev.sudhanshu.calender.presentation.view
 
 import android.util.Log
 import com.google.gson.annotations.SerializedName
+import dev.sudhanshu.calender.presentation.view.InsertTask.ConferenceData
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.io.Serializable
 
 data class GoogleCalendarEvent(
     @SerializedName("id") val id: String,
     @SerializedName("summary") val summary: String,
     @SerializedName("start") val start: EventDateTime,
-    @SerializedName("end") val end: EventDateTime
+    @SerializedName("end") val end: EventDateTime,
+    @SerializedName("conferenceData") val conferenceData: ConferenceData? = null
 )
 
 data class EventDateTime(

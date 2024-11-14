@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import com.google.gson.Gson
 
 class EventScheduler : BroadcastReceiver() {
 
@@ -61,8 +62,14 @@ class EventScheduler : BroadcastReceiver() {
         val requestCode = event.eventId.hashCode()
         val reminderTime = eventTimeMillis - TimeUnit.MINUTES.toMillis(10)
 
+        val gson = Gson()
+        val eventLinkJson = gson.toJson(event.eventLink)
+
         val intent = Intent(context, EventScheduler::class.java).apply {
             putExtra("eventTitle", event.eventName)
+            putExtra("eventId", event.eventId)
+            putExtra("eventLink", eventLinkJson)
+            Log.d("Reminder", "Future eventLink: $eventLinkJson")
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

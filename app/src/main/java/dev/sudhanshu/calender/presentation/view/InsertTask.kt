@@ -8,6 +8,12 @@ import dev.sudhanshu.calender.R
 import android.content.Intent
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import com.android.identity.util.UUID
 import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
@@ -25,6 +31,7 @@ import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.Header
 import retrofit2.http.POST
+import java.io.Serializable
 
 class InsertTask(private val context: Context) {
 
@@ -33,6 +40,7 @@ class InsertTask(private val context: Context) {
         summary: String,
         startDateTime: String,
         endDateTime: String,
+        createMeetLink: Boolean,  // New argument to control Google Meet link creation
         onSuccess: (String) -> Unit,
         onError: (Int) -> Unit
     ) {
@@ -43,17 +51,28 @@ class InsertTask(private val context: Context) {
 
         val service = retrofit.create(CalendarService::class.java)
 
-        // Build the event details
+        // Build the event details, conditionally adding conferenceData for Meet link
         val event = GoogleCalendarEvent(
             summary = summary,
             start = EventDateTime(dateTime = startDateTime, timeZone = "MST"),  // Adjust timezone as needed
-            end = EventDateTime(dateTime = endDateTime, timeZone = "MST")
+            end = EventDateTime(dateTime = endDateTime, timeZone = "MST"),
+            conferenceData = if (createMeetLink) {
+                ConferenceData(
+                    createRequest = CreateConferenceRequest(
+                        requestId = java.util.UUID.randomUUID().toString(),
+                        conferenceSolutionKey = ConferenceSolutionKey(type = "hangoutsMeet")
+                    )
+                )
+            } else {
+                null
+            }
         )
 
         // Make the API request
         val call = service.insertEvent(
             authorization = "Bearer $accessToken",
-            event = event
+            event = event,
+            conferenceDataVersion = if (createMeetLink) 1 else 0
         )
 
         call.enqueue(object : Callback<GoogleCalendarEventResponse> {
@@ -63,8 +82,9 @@ class InsertTask(private val context: Context) {
             ) {
                 if (response.isSuccessful) {
                     val eventResponse = response.body()
-                    Log.d("CalendarIntegration", "Event ID: ${eventResponse?.id}")
-                    onSuccess(eventResponse?.id ?: "")
+                    val meetLink = eventResponse?.hangoutLink ?: ""
+                    Log.d("CalendarIntegration", "Event ID: ${eventResponse?.id}, Meet Link: $meetLink")
+                    onSuccess(meetLink)
                 } else {
                     Log.e("CalendarIntegration", "Error inserting event")
                     onError(response.code())
@@ -78,19 +98,20 @@ class InsertTask(private val context: Context) {
         })
     }
 
-
     interface CalendarService {
         @POST("/calendar/v3/calendars/primary/events")
         fun insertEvent(
             @Header("Authorization") authorization: String,
-            @Body event: GoogleCalendarEvent
+            @Body event: GoogleCalendarEvent,
+            @retrofit2.http.Query("conferenceDataVersion") conferenceDataVersion: Int = 1
         ): Call<GoogleCalendarEventResponse>
     }
 
     data class GoogleCalendarEvent(
         @SerializedName("summary") val summary: String,
         @SerializedName("start") val start: EventDateTime,
-        @SerializedName("end") val end: EventDateTime
+        @SerializedName("end") val end: EventDateTime,
+        @SerializedName("conferenceData") val conferenceData: ConferenceData? = null
     )
 
     data class EventDateTime(
@@ -98,9 +119,49 @@ class InsertTask(private val context: Context) {
         @SerializedName("timeZone") val timeZone: String
     )
 
-    data class GoogleCalendarEventResponse(
-        @SerializedName("id") val id: String,
-        @SerializedName("status") val status: String
+    data class ConferenceData(
+        @SerializedName("createRequest") val createRequest: CreateConferenceRequest
     )
 
+    data class CreateConferenceRequest(
+        @SerializedName("requestId") val requestId: String,
+        @SerializedName("conferenceSolutionKey") val conferenceSolutionKey: ConferenceSolutionKey
+    )
+
+    data class ConferenceSolutionKey(
+        @SerializedName("type") val type: String // "hangoutsMeet" for Google Meet
+    )
+
+    data class GoogleCalendarEventResponse(
+        @SerializedName("id") val id: String,
+        @SerializedName("status") val status: String,
+        @SerializedName("hangoutLink") val hangoutLink: String? // Google Meet link
+    )
+
+}
+
+@Composable
+fun TaskTypeDialog(onDismiss: () -> Unit, onTaskTypeSelected: (String) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Task Type") },
+        text = {
+            Column {
+                Button(onClick = { onTaskTypeSelected("InsertTask") }) {
+                    Text("Schedule a Task/Reminder")
+                }
+                Button(onClick = { /* Handle other types */ }) {
+                    Text("Schedule a Meeting")
+                }
+                Button(onClick = { /* Handle other types */ }) {
+                    Text("Shopping/Grocery List")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

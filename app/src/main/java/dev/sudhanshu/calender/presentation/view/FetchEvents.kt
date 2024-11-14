@@ -90,11 +90,13 @@ class FetchEvents (private val context: Context){
                         response.forEach { event ->
                             val eventId = event.id ?: "unknown_id"
                             val eventStart = event.start?.dateTime ?: "unknown_start_time"  // Assuming `dateTime` is a property of `EventDateTime`
+                            val eventEnd = event.end?.dateTime ?: "unknown_end_time"
                             val eventSummary = event.summary ?: "No Summary"
+                            val eventLink = event.conferenceData
                             Log.d("Reminder EventScheduler", ">>Event ID: $eventId, Start time: $eventStart, Summary: $eventSummary")
 
                             if (!eventMap.containsKey(eventId)) {
-                                val newEvent = Event(eventId = eventId, eventName = eventSummary, eventStart = eventStart)
+                                val newEvent = Event(eventId = eventId, eventName = eventSummary, eventStart = eventStart, eventEnd = eventEnd, eventLink = eventLink)
                                 eventMap[eventId] = newEvent
                             }
                         }

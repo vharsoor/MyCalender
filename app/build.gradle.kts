@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -48,9 +50,16 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        //excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        //excludes += "META-INF/*"
+        excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        merges += "META-INF/LICENSE.md"
+        merges += "META-INF/LICENSE-notice.md"
         }
     }
+    //packaging {
+      //  resources.excludes.add("META-INF/*")
+    //}
 }
 
 dependencies {
@@ -69,6 +78,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.common)
     implementation(libs.firebase.messaging.ktx)
+    implementation(libs.identity.jvm)
     testImplementation(libs.junit)
     implementation(libs.accompanist.systemuicontroller)
     androidTestImplementation(libs.androidx.junit)

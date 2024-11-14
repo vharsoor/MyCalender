@@ -74,7 +74,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+//import androidx.appcompat.app.AlertDialog
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.SnackbarHost
 import androidx.compose.material.SnackbarHostState
@@ -116,10 +117,12 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             Log.d("Reminder", "Main Received reminder broadcast")
             val eventTitle = intent.getStringExtra("eventTitle")
+            val eventLink = intent.getStringExtra("eventLink")
+            Log.d("Reminder", "Main Received reminder broadcast $eventLink")
             eventTitle?.let {
                 lifecycleScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Reminder: $eventTitle is starting soon!",
+                        message = "Reminder: $eventTitle is starting soon!\n $eventLink",
                         actionLabel = "✖", // Add cross mark as the action label
                         duration = SnackbarDuration.Indefinite
                     )
@@ -358,23 +361,48 @@ fun CalendarApp(userId : Int) {
         }
     }
 
+    extracted(currentMonth, selectedDate, handleSwipe, userId, dateFormatter, isDialogOpen)
+
+
+}
+
+@Composable
+private fun extracted(
+    currentMonth: YearMonth,
+    selectedDate: LocalDate,
+    handleSwipe: (Boolean) -> Unit,
+    userId: Int,
+    dateFormatter: DateTimeFormatter?,
+    isDialogOpen: Boolean
+) {
+    var currentMonth1 = currentMonth
+    var selectedDate1 = selectedDate
+    var isDialogOpen1 = isDialogOpen
+
+    var isTaskTypeDialogOpen by remember { mutableStateOf(false) }
+    var isAddTaskDialogOpen by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colors.background)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.background)
+        ) {
 
             TopBar()
             Spacer(modifier = Modifier.height(16.dp))
-            MonthNavigation(currentMonth, onPrevMonth = {
-                currentMonth = currentMonth.minusMonths(1)
-                selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
+            MonthNavigation(currentMonth1, onPrevMonth = {
+                currentMonth1 = currentMonth1.minusMonths(1)
+                selectedDate1 =
+                    if (currentMonth1 == YearMonth.now()) LocalDate.now() else currentMonth1.atDay(1)
             }, onNextMonth = {
-                currentMonth = currentMonth.plusMonths(1)
-                selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
+                currentMonth1 = currentMonth1.plusMonths(1)
+                selectedDate1 =
+                    if (currentMonth1 == YearMonth.now()) LocalDate.now() else currentMonth1.atDay(1)
             })
             Spacer(modifier = Modifier.height(16.dp))
-            CalendarView(currentMonth, selectedDate, onDateSelected = { date ->
-                selectedDate = date
+            CalendarView(currentMonth1, selectedDate1, onDateSelected = { date ->
+                selectedDate1 = date
             }, onSwipeRight = {
                 handleSwipe(true)
                 //currentMonth = currentMonth.minusMonths(1)
@@ -386,36 +414,64 @@ fun CalendarApp(userId : Int) {
                 //selectedDate = if (currentMonth == YearMonth.now()) LocalDate.now() else currentMonth.atDay(1)
 
             })
-            CalenderTaskScreen(userId = userId, selectedDate.format(dateFormatter))
+            CalenderTaskScreen(userId = userId, selectedDate1.format(dateFormatter))
 
         }
 
         // Showing dialog when adding a task
-        if (isDialogOpen) {
+        /*if (isDialogOpen1) {
             AddTaskDialog(
                 userId,
-                date = selectedDate.format(dateFormatter),
+                date = selectedDate1.format(dateFormatter),
                 time = getCurrentTime(),
-                onDismiss = { isDialogOpen = false },
+                onDismiss = { isDialogOpen1 = false },
                 onSaveTask = {
-                    isDialogOpen = false
+                    isDialogOpen1 = false
+                }
+            )
+        }*/
+
+        // Show AddTaskDialog if the flag is set
+        if (isAddTaskDialogOpen) {
+            AddTaskDialog(
+                userId,
+                date = selectedDate1.format(dateFormatter),
+                time = getCurrentTime(),
+                onDismiss = { isAddTaskDialogOpen = false },
+                onSaveTask = {
+                    isAddTaskDialogOpen = false
                 }
             )
         }
 
+        // Show TaskTypeDialog if the flag is set
+        if (isTaskTypeDialogOpen) {
+            TaskTypeDialog(
+                onDismiss = { isTaskTypeDialogOpen = false },
+                onTaskTypeSelected = { taskType ->
+                    isTaskTypeDialogOpen = false
+                    if (taskType == "InsertTask") {
+                        isAddTaskDialogOpen = true
+                    }
+                    else if (taskType == "ScheduleMeeting") {
+
+                    }
+                    // Handle other task types here if needed
+                }
+            )
+        }
 
         FloatingActionButton(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
-            onClick = { isDialogOpen = true },
+            //onClick = { isDialogOpen1 = true },
+            onClick = { isTaskTypeDialogOpen = true },
             containerColor = Color(0xFFE5FF7F)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add Task", tint = Color.Black)
         }
     }
-
-
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -644,6 +700,7 @@ class PinVerificationActivity : AppCompatActivity() {
         return enteredPin == storedPin
     }
 }
+
 
 
 

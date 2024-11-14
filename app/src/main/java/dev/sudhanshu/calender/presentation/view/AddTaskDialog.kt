@@ -178,6 +178,7 @@ fun AddTaskDialog(
                                 summary = title,
                                 startDateTime = startDateTime,
                                 endDateTime = endDateTime,
+                                createMeetLink = true,
                                 onSuccess = { eventId ->
                                     Log.d("CalendarIntegration", "Event inserted with ID: $eventId")
                                     onSaveTask() // Update the UI or dismiss the dialog
