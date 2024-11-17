@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Calender</string>
+    <string name="web_client_id"></string>
+    <string name="client_secret"></string>
+    <string name="event_activity_label">Event Activity</string>
+    <string name="title_activity_calender_tasks">CalenderTasks</string>
+</resources>
