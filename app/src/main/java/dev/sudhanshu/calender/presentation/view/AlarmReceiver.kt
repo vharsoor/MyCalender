@@ -22,12 +22,14 @@ class EventScheduler : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val eventTitle = intent.getStringExtra("eventTitle")
-        Log.d("Reminder", "Received reminder for in alarm receiever, event: $eventTitle")
+        val eventLink = intent.getStringExtra("eventLink")
+        Log.d("Reminder", "Received reminder for in alarm receiever, event link is: $eventLink")
         //eventTitle?.let {
             //showToast(context, "Reminder: $it is starting soon!")
         //}
         val intent = Intent("dev.sudhanshu.calender.REMINDER_EVENT").apply {
             putExtra("eventTitle", eventTitle)
+            putExtra("eventLink", intent.getStringExtra("eventLink"))
         }
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
         //LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
@@ -62,6 +64,7 @@ class EventScheduler : BroadcastReceiver() {
         val requestCode = event.eventId.hashCode()
         val reminderTime = eventTimeMillis - TimeUnit.MINUTES.toMillis(10)
 
+        Log.d("Reminder", "Scheduled reminder for ${event.eventLink}")
         val gson = Gson()
         val eventLinkJson = gson.toJson(event.eventLink)
 

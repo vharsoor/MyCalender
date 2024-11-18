@@ -23,7 +23,7 @@ data class Event(
     @ColumnInfo(name="event_name") val eventName: String?,
     @ColumnInfo(name="event_start") val eventStart: String?,
     @ColumnInfo(name="event_end") val eventEnd: String?,
-    @ColumnInfo(name="Link") val eventLink: ConferenceData? = null,
+    @ColumnInfo(name="Link") val eventLink: String? = null,
     //@ColumnInfo(name="summary") val summary: String?
 )
 

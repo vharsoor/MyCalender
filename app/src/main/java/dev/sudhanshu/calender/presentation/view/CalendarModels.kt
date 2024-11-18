@@ -13,7 +13,7 @@ data class GoogleCalendarEvent(
     @SerializedName("summary") val summary: String,
     @SerializedName("start") val start: EventDateTime,
     @SerializedName("end") val end: EventDateTime,
-    @SerializedName("conferenceData") val conferenceData: ConferenceData? = null
+    @SerializedName("hangoutLink") val hangoutLink: String? = null
 )
 
 data class EventDateTime(

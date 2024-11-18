@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -79,6 +80,7 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.SnackbarHost
 import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.SnackbarResult
 import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -121,11 +123,30 @@ class MainActivity : ComponentActivity() {
             Log.d("Reminder", "Main Received reminder broadcast $eventLink")
             eventTitle?.let {
                 lifecycleScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = "Reminder: $eventTitle is starting soon!\n $eventLink",
-                        actionLabel = "✖", // Add cross mark as the action label
-                        duration = SnackbarDuration.Indefinite
-                    )
+                    if (eventLink == "No Link") {
+                        snackbarHostState.showSnackbar(
+                            message = "Reminder: $eventTitle is starting soon!\nNo meeting link available.",
+                            actionLabel = "✖", // Cross mark action label
+                            duration = SnackbarDuration.Indefinite
+                        )
+                    } else {
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Reminder: $eventTitle is starting soon!",
+                            actionLabel = "JOIN", // Join action label
+                            duration = SnackbarDuration.Indefinite
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            // Open the Google Meet link
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(eventLink)).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK // Add this flag
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("Snackbar", "Invalid link: $eventLink", e)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -219,26 +240,28 @@ class MainActivity : ComponentActivity() {
                 ::onSignInSuccess,
                 ::onSignInError
             )
-            Log.d("LockScreen", "Register Lockscreen Receiver")
-            lockScreenReceiver = LockScreenReceiver()
-            val filter = IntentFilter().apply{
+            //Log.d("LockScreen", "Register Lockscreen Receiver")
+            //lockScreenReceiver = LockScreenReceiver()
+            /*val filter = IntentFilter().apply{
                 addAction(Intent.ACTION_USER_PRESENT)
                 addAction(Intent.ACTION_SCREEN_OFF)
             }
-            registerReceiver(lockScreenReceiver, filter)
+            registerReceiver(lockScreenReceiver, filter)*/
         } else {
             // No refresh token available, initiate Google Sign-In
             Log.d("CalendarIntegration", "Logging in for the first time")
             //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
             Log.d("LockScreen", "Register Lockscreen Receiver")
-            lockScreenReceiver = LockScreenReceiver()
+            /*lockScreenReceiver = LockScreenReceiver()
             val filter = IntentFilter().apply{
                 addAction(Intent.ACTION_USER_PRESENT)
                 addAction(Intent.ACTION_SCREEN_OFF)
             }
             registerReceiver(lockScreenReceiver, filter)
-            googleSignInTime()
+            googleSignInTime()*/
         }
+
+        googleSignInTime()
 
         FirebaseMessaging.getInstance().subscribeToTopic("event_notifications")
             .addOnCompleteListener { task ->
@@ -382,6 +405,10 @@ private fun extracted(
     var isTaskTypeDialogOpen by remember { mutableStateOf(false) }
     var isAddTaskDialogOpen by remember { mutableStateOf(false) }
 
+    var showShoppingDialog by remember { mutableStateOf(false) }
+    var navigateToShoppingCart by remember { mutableStateOf(false) }
+    val shoppingList = remember { mutableStateListOf<String>() }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -444,6 +471,7 @@ private fun extracted(
             )
         }
 
+
         // Show TaskTypeDialog if the flag is set
         if (isTaskTypeDialogOpen) {
             TaskTypeDialog(
@@ -456,8 +484,28 @@ private fun extracted(
                     else if (taskType == "ScheduleMeeting") {
 
                     }
-                    // Handle other task types here if needed
+                    else if (taskType == "ShoppingList") {
+                        navigateToShoppingCart = true
+                        Log.d("Shopping List","Selected Shopping List")
+                    }
                 }
+            )
+        }
+        val context = LocalContext.current
+        if(navigateToShoppingCart){
+            Log.d("Shopping List","About to start shopping list activity")
+            val intent = Intent(context, ShoppingListActivity::class.java)
+            context.startActivity(intent)
+            navigateToShoppingCart = false
+        }
+        if(showShoppingDialog){
+            AddItemDialog(
+                onAddItem = {
+                        itemName ->
+                    shoppingList.add("$itemName")
+                    showShoppingDialog = false
+                },
+                onDismiss = {showShoppingDialog = false}
             )
         }
 
@@ -473,6 +521,8 @@ private fun extracted(
         }
     }
 }
+
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable

@@ -13,6 +13,11 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.android.identity.util.UUID
 import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
@@ -75,6 +80,8 @@ class InsertTask(private val context: Context) {
             conferenceDataVersion = if (createMeetLink) 1 else 0
         )
 
+        Log.d("CalendarIntegration", "Event Details: $event")
+
         call.enqueue(object : Callback<GoogleCalendarEventResponse> {
             override fun onResponse(
                 call: Call<GoogleCalendarEventResponse>,
@@ -82,9 +89,20 @@ class InsertTask(private val context: Context) {
             ) {
                 if (response.isSuccessful) {
                     val eventResponse = response.body()
-                    val meetLink = eventResponse?.hangoutLink ?: ""
+                    val meetLink = eventResponse?.hangoutLink
                     Log.d("CalendarIntegration", "Event ID: ${eventResponse?.id}, Meet Link: $meetLink")
-                    onSuccess(meetLink)
+                    if (createMeetLink && meetLink != null) {
+                        event.conferenceData = event.conferenceData?.createRequest?.let {
+                            ConferenceData(
+                                createRequest = it,
+                                hangoutLink = meetLink
+                            )
+                        }
+                    }
+                    Log.d("CalendarIntegration", "Event ID: ${eventResponse?.id}, Meet Link: ${event.conferenceData?.hangoutLink}")
+                    if (meetLink != null) {
+                        onSuccess(meetLink)
+                    }
                 } else {
                     Log.e("CalendarIntegration", "Error inserting event")
                     onError(response.code())
@@ -111,7 +129,7 @@ class InsertTask(private val context: Context) {
         @SerializedName("summary") val summary: String,
         @SerializedName("start") val start: EventDateTime,
         @SerializedName("end") val end: EventDateTime,
-        @SerializedName("conferenceData") val conferenceData: ConferenceData? = null
+        @SerializedName("conferenceData") var conferenceData: ConferenceData? = null
     )
 
     data class EventDateTime(
@@ -120,7 +138,8 @@ class InsertTask(private val context: Context) {
     )
 
     data class ConferenceData(
-        @SerializedName("createRequest") val createRequest: CreateConferenceRequest
+        @SerializedName("createRequest") val createRequest: CreateConferenceRequest,
+        @SerializedName("hangoutLink") val hangoutLink: String? = null
     )
 
     data class CreateConferenceRequest(
@@ -150,10 +169,10 @@ fun TaskTypeDialog(onDismiss: () -> Unit, onTaskTypeSelected: (String) -> Unit) 
                 Button(onClick = { onTaskTypeSelected("InsertTask") }) {
                     Text("Schedule a Task/Reminder")
                 }
-                Button(onClick = { /* Handle other types */ }) {
+                Button(onClick = {  }) {
                     Text("Schedule a Meeting")
                 }
-                Button(onClick = { /* Handle other types */ }) {
+                Button(onClick = { onTaskTypeSelected("ShoppingList") }) {
                     Text("Shopping/Grocery List")
                 }
             }
