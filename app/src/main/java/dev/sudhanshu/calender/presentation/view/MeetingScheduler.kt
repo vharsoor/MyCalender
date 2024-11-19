@@ -12,6 +12,7 @@ import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import dev.sudhanshu.calender.presentation.view.model.Event
 
 // Retrofit API Interface for Calendar Service
 interface CalendarService {

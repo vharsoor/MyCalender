@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import dev.sudhanshu.calender.presentation.view.model.Converters
+import dev.sudhanshu.calender.presentation.view.model.Event
+import dev.sudhanshu.calender.presentation.view.dao.EventDao
 import dev.sudhanshu.calender.presentation.view.dao.ShoppingItemDao
 import dev.sudhanshu.calender.presentation.view.model.ShoppingItem
 
@@ -26,7 +30,11 @@ object DatabaseProvider {
     }
 }
 
-@Database(entities = [ShoppingItem::class], version=1, exportSchema = false)
-abstract class AppDatabase:RoomDatabase(){
-    abstract fun shoppingItemDao():ShoppingItemDao
+
+
+@Database(entities = [Event::class, ShoppingItem::class], version = 1, exportSchema = false)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun eventDao(): EventDao
+    abstract fun shoppingItemDao(): ShoppingItemDao
 }

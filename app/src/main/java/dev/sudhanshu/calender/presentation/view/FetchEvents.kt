@@ -19,7 +19,7 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-
+import dev.sudhanshu.calender.presentation.view.model.Event
 class FetchEvents (private val context: Context){
 
     fun getCurrentTimeRFC3339(): String {

@@ -67,6 +67,10 @@ fun ShoppingListScreen(shoppingItemDao: ShoppingItemDao){
     val shoppingItems = remember { mutableStateOf<List<ShoppingItem>>(emptyList()) }
     var navigateToMainCalendar by remember { mutableStateOf(false) }
     var context = LocalContext.current
+    var initialShoppingList by remember { mutableStateOf(true) }
+    var updateShoppingList by remember { mutableStateOf(false) }
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -83,7 +87,13 @@ fun ShoppingListScreen(shoppingItemDao: ShoppingItemDao){
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        ItemList(shoppingItemDao, shoppingItems)
+        if(initialShoppingList){
+            ItemList(shoppingItemDao, shoppingItems)
+        }
+        else{
+            CheckboxList(shoppingItems.value)
+        }
+
 
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
@@ -97,6 +107,9 @@ fun ShoppingListScreen(shoppingItemDao: ShoppingItemDao){
             onClick = {
 
                 addItem(shoppingItemDao, itemName)
+                val item = ShoppingItem(name=itemName)
+                shoppingItems.value = shoppingItems.value + item
+                initialShoppingList = false
             },
             modifier = Modifier.fillMaxWidth()
         ) {

@@ -38,7 +38,7 @@ class EventScheduler : BroadcastReceiver() {
     // Fetches and schedules reminders
     suspend fun fetchAndScheduleAllReminders(context: Context, accessToken: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val eventMap: MutableMap<String, dev.sudhanshu.calender.presentation.view.Event> = mutableMapOf()
+        val eventMap: MutableMap<String, dev.sudhanshu.calender.presentation.view.model.Event> = mutableMapOf()
 
         val fetchEvents = FetchEvents(context)
         CoroutineScope(Dispatchers.IO).launch {
@@ -58,7 +58,7 @@ class EventScheduler : BroadcastReceiver() {
     private fun scheduleEventReminder(
         context: Context,
         alarmManager: AlarmManager,
-        event: dev.sudhanshu.calender.presentation.view.Event,
+        event: dev.sudhanshu.calender.presentation.view.model.Event,
         eventTimeMillis: Long
     ) {
         val requestCode = event.eventId.hashCode()
