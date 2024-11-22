@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.androidx.hilt.common)
     implementation(libs.firebase.messaging.ktx)
     implementation(libs.identity.jvm)
+    implementation(libs.androidx.browser)
     testImplementation(libs.junit)
     implementation(libs.accompanist.systemuicontroller)
     androidTestImplementation(libs.androidx.junit)

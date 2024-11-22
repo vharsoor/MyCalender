@@ -34,6 +34,7 @@ hiltCommon = "1.2.0"
 uiDesktop = "1.6.8"
 firebaseMessagingKtx = "24.0.2"
 identityJvm = "202411.1"
+browser = "1.8.0"
 
 [libraries]
 accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
@@ -77,6 +78,7 @@ converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref
 androidx-ui-desktop = { group = "androidx.compose.ui", name = "ui-desktop", version.ref = "uiDesktop" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 identity-jvm = { group = "com.android.identity", name = "identity-jvm", version.ref = "identityJvm" }
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 
 
 

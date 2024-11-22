@@ -1,42 +1,47 @@
 package dev.sudhanshu.calender.presentation.view
 
+//import androidx.appcompat.app.AlertDialog
 import android.Manifest
-import android.app.admin.DevicePolicyManager
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
-import java.util.*
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHost
+import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.SnackbarResult
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,56 +53,32 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
 import dev.sudhanshu.calender.R
 import dev.sudhanshu.calender.presentation.ui.theme.CalenderTheme
 import dev.sudhanshu.calender.presentation.ui.theme.Typography
-import dev.sudhanshu.calender.presentation.viewmodel.TaskViewModel
 import dev.sudhanshu.calender.util.SettingsPreferences
+import kotlinx.coroutines.*
+import java.lang.ref.WeakReference
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.tasks.Task
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.*
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-//import androidx.appcompat.app.AlertDialog
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.SnackbarDuration
-import androidx.compose.material.SnackbarHost
-import androidx.compose.material.SnackbarHostState
-import androidx.compose.material.SnackbarResult
-import androidx.core.content.ContextCompat
-import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
-import kotlin.coroutines.resumeWithException
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.lifecycleScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
-import com.google.firebase.messaging.RemoteMessage
-import java.net.HttpURLConnection
-import java.net.URL
-
-import dev.sudhanshu.calender.presentation.view.AddContactScreen
+import java.util.*
+import android.webkit.WebView
+import android.widget.FrameLayout
+import dev.sudhanshu.calender.app.MainApp
+import androidx.browser.customtabs.CustomTabsIntent
 
 
 @AndroidEntryPoint
@@ -115,12 +96,35 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var snackbarHostState: SnackbarHostState
 
+
+    companion object {
+        private var applicationContext: Context? = null
+        private var activityReference: WeakReference<MainActivity>? = null
+
+        fun setActivity(activity: MainActivity?) {
+            activityReference = WeakReference(activity)
+            if (activity != null) {
+                applicationContext = activity.applicationContext
+            }
+        }
+
+        fun getActivity(): MainActivity? {
+            return activityReference?.get()
+        }
+
+        fun getContext(): Context? {
+            return getActivity() ?: applicationContext
+        }
+    }
+
+
     private val reminderReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             Log.d("Reminder", "Main Received reminder broadcast")
             val eventTitle = intent.getStringExtra("eventTitle")
-            val eventLink = intent.getStringExtra("eventLink")
+            var eventLink = intent.getStringExtra("eventLink")
             Log.d("Reminder", "Main Received reminder broadcast $eventLink")
+
             eventTitle?.let {
                 lifecycleScope.launch {
                     if (eventLink == "No Link") {
@@ -135,15 +139,73 @@ class MainActivity : ComponentActivity() {
                             actionLabel = "JOIN", // Join action label
                             duration = SnackbarDuration.Indefinite
                         )
+
                         if (result == SnackbarResult.ActionPerformed) {
                             // Open the Google Meet link
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(eventLink)).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK // Add this flag
+                            val activityContext = (applicationContext as MainApp).getCurrentActivity()
+
+                            stopLockTask()
+                            // Ensure you use the correct context for starting the activity
+                            //var activityContext = MainActivity.getActivity()
+
+                            if (activityContext != null) {
+                                Log.d("MainActivity", "Context: $context, Is Finishing: ${(context as? Activity)?.isFinishing}")
+                                Log.d("Test", "Activity Context: $activityContext")
+                                Log.d("Test", "Activity Context resolve package: ${intent.resolveActivity(activityContext.packageManager)}")
                             }
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e("Snackbar", "Invalid link: $eventLink", e)
+
+                            val webView = activityContext?.let { it1 ->
+                                WebView(it1).apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                }
+                            }
+
+                            val backButton = Button(activityContext).apply {
+                                text = "Go Back To Calendar"
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                )
+                                setOnClickListener {
+                                    val intent = Intent(activityContext, MainActivity::class.java)
+                                    activityContext?.startActivity(intent)
+                                    activityContext?.finish() // Close the current activity (WebView)
+                                }
+                            }
+
+                            // Use a container layout to hold both WebView and Button
+                            val containerLayout = activityContext?.let { it1 ->
+                                FrameLayout(it1).apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                    addView(webView)
+                                    addView(backButton)
+                                }
+                            }
+
+                            // Set the container layout as the content view
+                            activityContext?.setContentView(containerLayout)
+                            /*val webView = activityContext?.let { it1 -> WebView(it1) }
+                            setContentView(webView)*/
+
+                            eventLink = eventLink?.replace("\"", "")?.trim() // Remove unwanted quotes and whitespace
+
+                            if (!eventLink.isNullOrEmpty()) {
+                                if (!eventLink!!.startsWith("http://") && !eventLink!!.startsWith("https://")) {
+                                    eventLink = "https://$eventLink" // Default to https:// if no protocol is provided
+                                }
+
+                                Log.d("Test", "Sanitized event link: $eventLink")
+
+                                webView?.loadUrl(eventLink!!) // Load the sanitized URL in WebView
+                                    ?: Log.e("Test", "WebView is null, cannot load URL")
+                            } else {
+                                Log.e("Test", "Invalid event link provided")
                             }
                         }
                     }
@@ -152,11 +214,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-         settingsPreferences = SettingsPreferences.getInstance(this)
+        settingsPreferences = SettingsPreferences.getInstance(this)
+        val googleIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+
+        if (googleIntent.resolveActivity(packageManager) != null) {
+            startActivity(googleIntent)
+        } else {
+            Log.e("MainActivity", "No app available to handle this intent")
+        }
+
+        setActivity(this)
 
         startScreenPinning()
 
@@ -240,28 +312,28 @@ class MainActivity : ComponentActivity() {
                 ::onSignInSuccess,
                 ::onSignInError
             )
-            //Log.d("LockScreen", "Register Lockscreen Receiver")
-            //lockScreenReceiver = LockScreenReceiver()
-            /*val filter = IntentFilter().apply{
-                addAction(Intent.ACTION_USER_PRESENT)
-                addAction(Intent.ACTION_SCREEN_OFF)
-            }
-            registerReceiver(lockScreenReceiver, filter)*/
-        } else {
-            // No refresh token available, initiate Google Sign-In
-            Log.d("CalendarIntegration", "Logging in for the first time")
-            //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
             Log.d("LockScreen", "Register Lockscreen Receiver")
-            /*lockScreenReceiver = LockScreenReceiver()
+            lockScreenReceiver = LockScreenReceiver()
             val filter = IntentFilter().apply{
                 addAction(Intent.ACTION_USER_PRESENT)
                 addAction(Intent.ACTION_SCREEN_OFF)
             }
             registerReceiver(lockScreenReceiver, filter)
-            googleSignInTime()*/
+        } else {
+            // No refresh token available, initiate Google Sign-In
+            Log.d("CalendarIntegration", "Logging in for the first time")
+            //googleSignInHelper.initiateGoogleSignIn(signInLauncher)
+            Log.d("LockScreen", "Register Lockscreen Receiver")
+            lockScreenReceiver = LockScreenReceiver()
+            val filter = IntentFilter().apply{
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(lockScreenReceiver, filter)
+            googleSignInTime()
         }
 
-        googleSignInTime()
+        //googleSignInTime()
 
         FirebaseMessaging.getInstance().subscribeToTopic("event_notifications")
             .addOnCompleteListener { task ->
@@ -274,9 +346,11 @@ class MainActivity : ComponentActivity() {
 
 
     override fun onDestroy() {
+        setActivity(null)
         super.onDestroy()
         eventServer?.stop()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(reminderReceiver)
+        unregisterReceiver(lockScreenReceiver)
     }
 
     private fun onSignInSuccess(accessToken: String) {
@@ -750,8 +824,3 @@ class PinVerificationActivity : AppCompatActivity() {
         return enteredPin == storedPin
     }
 }
-
-
-
-
-

@@ -27,6 +27,8 @@ class EventScheduler : BroadcastReceiver() {
         //eventTitle?.let {
             //showToast(context, "Reminder: $it is starting soon!")
         //}
+        val activityContext = intent.getSerializableExtra("activityContext") as? Context
+
         val intent = Intent("dev.sudhanshu.calender.REMINDER_EVENT").apply {
             putExtra("eventTitle", eventTitle)
             putExtra("eventLink", intent.getStringExtra("eventLink"))

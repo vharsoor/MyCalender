@@ -407,7 +407,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         Log.d("Notification", "db is built")
         val fetchEvents = FetchEvents(this);
         val eventScheduler = EventScheduler()
-        /*CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             val result1 = withContext(Dispatchers.IO){
 
                 fetchEvents.fetchEventsFromCloud("$accesstoken", eventMap)
@@ -420,7 +420,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 deleteAllEventsFromDB(eventDao)
             }
 
-        }*/
+        }
 
         CoroutineScope(Dispatchers.Main).launch {
             eventScheduler.fetchAndScheduleAllReminders(context = this@MyFirebaseMessagingService,"$accesstoken")
