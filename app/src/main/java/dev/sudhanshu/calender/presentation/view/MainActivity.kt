@@ -3,7 +3,9 @@ package dev.sudhanshu.calender.presentation.view
 //import androidx.appcompat.app.AlertDialog
 import android.Manifest
 import android.app.Activity
+import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -15,6 +17,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -76,6 +79,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import dev.sudhanshu.calender.app.MainApp
 import androidx.browser.customtabs.CustomTabsIntent
@@ -109,6 +113,9 @@ class MainActivity : ComponentActivity() {
         }
 
         fun getActivity(): MainActivity? {
+
+
+
             return activityReference?.get()
         }
 
@@ -116,7 +123,6 @@ class MainActivity : ComponentActivity() {
             return getActivity() ?: applicationContext
         }
     }
-
 
     private val reminderReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -193,6 +199,7 @@ class MainActivity : ComponentActivity() {
                             /*val webView = activityContext?.let { it1 -> WebView(it1) }
                             setContentView(webView)*/
 
+
                             eventLink = eventLink?.replace("\"", "")?.trim() // Remove unwanted quotes and whitespace
 
                             if (!eventLink.isNullOrEmpty()) {
@@ -202,8 +209,37 @@ class MainActivity : ComponentActivity() {
 
                                 Log.d("Test", "Sanitized event link: $eventLink")
 
-                                webView?.loadUrl(eventLink!!) // Load the sanitized URL in WebView
-                                    ?: Log.e("Test", "WebView is null, cannot load URL")
+//                                webView?.loadUrl(eventLink!!) // Load the sanitized URL in WebView
+//                                    ?: Log.e("Test", "WebView is null, cannot load URL")
+
+                                val googleMeetPackage = "com.google.android.apps.tachyon" // Google Meet package
+                                val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                                val componentName = ComponentName(applicationContext, MyDeviceAdminReceiver::class.java)
+
+                                dpm.setLockTaskPackages(componentName, arrayOf(googleMeetPackage))
+                                if (dpm.isLockTaskPermitted(googleMeetPackage)) {
+                                    Log.d("Test", "Lock Task is permitted for Google Meet")
+                                    //val appContext = context.applicationContext
+                                    // Launch Google Meet app
+                                    val appContext = context.applicationContext
+                                    val intent = appContext.packageManager.getLaunchIntentForPackage(googleMeetPackage)
+
+                                    if (intent != null) {
+                                    startActivity(intent) // Launch Google Meet app
+                                    lifecycleScope.launch {
+                                        delay(500) // Slight delay to ensure the app is launched
+                                        startLockTask() // Pin Google Meet app
+                                        Log.d("Test", "Google Meet app pinned in Lock Task mode")
+                                        }
+
+                                    } else {
+                                        Log.e("Test", "Failed to launch Google Meet app")
+                                    }
+
+
+                                } else {
+                                    Log.e("Test", "Lock Task is not permitted for Google Meet")
+                                }
                             } else {
                                 Log.e("Test", "Invalid event link provided")
                             }
@@ -219,19 +255,30 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        settingsPreferences = SettingsPreferences.getInstance(this)
-        val googleIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+        val devicePolicyManager = getSystemService(DevicePolicyManager::class.java)
+        val adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
 
-        if (googleIntent.resolveActivity(packageManager) != null) {
-            startActivity(googleIntent)
-        } else {
-            Log.e("MainActivity", "No app available to handle this intent")
+        val isWhitelisted = devicePolicyManager.isLockTaskPermitted(packageName)
+
+        if (!isWhitelisted) {
+            // Whitelist the app for lock task mode
+            devicePolicyManager.setLockTaskPackages(adminComponent, arrayOf(packageName))
         }
+
+        settingsPreferences = SettingsPreferences.getInstance(this)
+//        val googleIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+//
+//        if (googleIntent.resolveActivity(packageManager) != null) {
+//            startActivity(googleIntent)
+//        } else {
+//            Log.e("MainActivity", "No app available to handle this intent")
+//        }
 
         setActivity(this)
 
         startScreenPinning()
-
+//        val intent = Intent(this, AppLauncher::class.java)
+//        startActivity(intent)
         snackbarHostState = SnackbarHostState() // Initialize the class property
 
         setContent {

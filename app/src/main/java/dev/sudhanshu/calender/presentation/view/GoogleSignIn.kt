@@ -207,6 +207,16 @@ class GoogleSignInHelper(private val context: Context) {
         val calendarService = retrofit.create(CalendarService::class.java)
         Log.d("FCM Token","access : $accesstoken")
 
+        val sharedPref = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val fcmToken = sharedPref.getString("FCM_TOKEN", null) // null if no token is saved
+
+        if (fcmToken != null) {
+            Log.d("FCM Token", "Retrieved token: $fcmToken")
+        } else {
+            Log.d("FCM Token", "No token found. It might be generated later.")
+        }
+
+
         // Make API call to fetch the calendar list
         val call = calendarService.getCalendarList("Bearer $accesstoken")
         call.enqueue(object : Callback<CalendarListResponse> {
@@ -222,7 +232,11 @@ class GoogleSignInHelper(private val context: Context) {
                         calendarID = it.id
                         val myFirebaseMessagingService = MyFirebaseMessagingService()
                         Log.d("FCM Token", "Calling in between the calendar and token")
-                        myFirebaseMessagingService.sendTokenToServer(MyFirebaseMessagingService.fcmtoken, "$calendarID")
+                        Log.d("FCM Token", "Firebase token :  $fcmToken}")
+                        //myFirebaseMessagingService.sendTokenToServer(MyFirebaseMessagingService.fcmtoken, calendarID)
+                        if (fcmToken != null) {
+                            myFirebaseMessagingService.sendTokenToServer(fcmToken, calendarID)
+                        }
                     } ?: Log.d("FCM Token", "Primary calendar not found")
                 } else {
                     Log.d("FCM Token", "Failed to fetch calendars: ${response.code()}")
@@ -311,6 +325,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         fcmtoken = token
         // Send the new token to your backend
         //sendTokenToServer(token)
+
+        val sharedPref = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = sharedPref.edit()
+        editor.putString("FCM_TOKEN", token)
+        editor.apply()
     }
 
     fun sendTokenToServer(token: String, calendarId: String) {
@@ -353,8 +372,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
 
-
-    
     // Optional: Manually regenerate token if needed
     fun regenerateToken() {
         FirebaseMessaging.getInstance().deleteToken().addOnCompleteListener { task ->
@@ -382,6 +399,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val googleSignInHelper = GoogleSignInHelper(this)
         val refreshToken = googleSignInHelper.loadRefreshToken()
         if (refreshToken != null) {
+            Log.d("FCM Token","We will get access token from refresh Token: $refreshToken")
             googleSignInHelper.getNewAccessTokenFromRefreshToken(
                 refreshToken = refreshToken,
                 onSuccess = ::onSignInSuccess,
