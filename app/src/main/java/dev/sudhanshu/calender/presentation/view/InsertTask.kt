@@ -1,3 +1,13 @@
+/**
+ * InsertTask.kt
+ *
+ * Handles Google Calendar event creation via the API.
+ * - Supports optional Google Meet link generation.
+ * - Sends authenticated requests using Retrofit.
+ * - Includes a dialog UI for selecting task types.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.content.Context

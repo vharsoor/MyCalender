@@ -1,3 +1,19 @@
+/**
+ * GoogleCalendarEventModels.kt
+ *
+ * This file defines data models and utilities for interacting with Google Calendar events.
+ *
+ * Main Components:
+ * - `GoogleCalendarEvent`: Represents a calendar event with ID, summary, start/end time, and optional meet link.
+ * - `EventDateTime`: Encapsulates event start/end time in RFC 3339 format with time zone.
+ * - `GoogleCalendarEventResponse`: Holds the response returned after inserting a calendar event.
+ * - `dateTimeStringToMills`: Converts a timeZone string (ISO_ZONED_DATE_TIME format) to epoch milliseconds.
+ *
+ * Used for parsing JSON responses and preparing requests to/from the Google Calendar API.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.util.Log

@@ -1,3 +1,14 @@
+/**
+ * MainActivity.kt
+ *
+ * The main screen of the calendar app.
+ * - Displays an interactive calendar with task viewing and scheduling.
+ * - Handles Google Sign-In, refresh token usage, and FCM notification handling.
+ * - Launches meeting links in a WebView with a return option.
+ * - Supports task types: calendar tasks, meetings, and shopping lists.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 //import androidx.appcompat.app.AlertDialog
@@ -209,37 +220,37 @@ class MainActivity : ComponentActivity() {
 
                                 Log.d("Test", "Sanitized event link: $eventLink")
 
-//                                webView?.loadUrl(eventLink!!) // Load the sanitized URL in WebView
-//                                    ?: Log.e("Test", "WebView is null, cannot load URL")
+                                webView?.loadUrl(eventLink!!) // Load the sanitized URL in WebView
+                                    ?: Log.e("Test", "WebView is null, cannot load URL")
 
-                                val googleMeetPackage = "com.google.android.apps.tachyon" // Google Meet package
-                                val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-                                val componentName = ComponentName(applicationContext, MyDeviceAdminReceiver::class.java)
-
-                                dpm.setLockTaskPackages(componentName, arrayOf(googleMeetPackage))
-                                if (dpm.isLockTaskPermitted(googleMeetPackage)) {
-                                    Log.d("Test", "Lock Task is permitted for Google Meet")
-                                    //val appContext = context.applicationContext
-                                    // Launch Google Meet app
-                                    val appContext = context.applicationContext
-                                    val intent = appContext.packageManager.getLaunchIntentForPackage(googleMeetPackage)
-
-                                    if (intent != null) {
-                                    startActivity(intent) // Launch Google Meet app
-                                    lifecycleScope.launch {
-                                        delay(500) // Slight delay to ensure the app is launched
-                                        startLockTask() // Pin Google Meet app
-                                        Log.d("Test", "Google Meet app pinned in Lock Task mode")
-                                        }
-
-                                    } else {
-                                        Log.e("Test", "Failed to launch Google Meet app")
-                                    }
-
-
-                                } else {
-                                    Log.e("Test", "Lock Task is not permitted for Google Meet")
-                                }
+//                                val googleMeetPackage = "com.google.android.apps.tachyon" // Google Meet package
+//                                val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+//                                val componentName = ComponentName(applicationContext, MyDeviceAdminReceiver::class.java)
+//
+//                                dpm.setLockTaskPackages(componentName, arrayOf(googleMeetPackage))
+//                                if (dpm.isLockTaskPermitted(googleMeetPackage)) {
+//                                    Log.d("Test", "Lock Task is permitted for Google Meet")
+//                                    //val appContext = context.applicationContext
+//                                    // Launch Google Meet app
+//                                    val appContext = context.applicationContext
+//                                    val intent = appContext.packageManager.getLaunchIntentForPackage(googleMeetPackage)
+//
+//                                    if (intent != null) {
+//                                    startActivity(intent) // Launch Google Meet app
+//                                    lifecycleScope.launch {
+//                                        delay(500) // Slight delay to ensure the app is launched
+//                                        startLockTask() // Pin Google Meet app
+//                                        Log.d("Test", "Google Meet app pinned in Lock Task mode")
+//                                        }
+//
+//                                    } else {
+//                                        Log.e("Test", "Failed to launch Google Meet app")
+//                                    }
+//
+//
+//                                } else {
+//                                    Log.e("Test", "Lock Task is not permitted for Google Meet")
+//                                }
                             } else {
                                 Log.e("Test", "Invalid event link provided")
                             }
@@ -255,7 +266,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val devicePolicyManager = getSystemService(DevicePolicyManager::class.java)
+        /*val devicePolicyManager = getSystemService(DevicePolicyManager::class.java)
         val adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
 
         val isWhitelisted = devicePolicyManager.isLockTaskPermitted(packageName)
@@ -263,7 +274,7 @@ class MainActivity : ComponentActivity() {
         if (!isWhitelisted) {
             // Whitelist the app for lock task mode
             devicePolicyManager.setLockTaskPackages(adminComponent, arrayOf(packageName))
-        }
+        }*/
 
         settingsPreferences = SettingsPreferences.getInstance(this)
 //        val googleIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
@@ -276,7 +287,7 @@ class MainActivity : ComponentActivity() {
 
         setActivity(this)
 
-        startScreenPinning()
+        //startScreenPinning()
 //        val intent = Intent(this, AppLauncher::class.java)
 //        startActivity(intent)
         snackbarHostState = SnackbarHostState() // Initialize the class property
@@ -453,7 +464,7 @@ class MainActivity : ComponentActivity() {
         if (shouldTriggerPinVerification()) {
             if (System.currentTimeMillis() - backPressedTime < 2000) {
                 Log.d("Vishrut","Enterted Back triggered")
-                stopScreenPinning()
+                //stopScreenPinning()
             } else {
                 Toast.makeText(this, "Press back again to unpin", Toast.LENGTH_SHORT).show()
                 backPressedTime = System.currentTimeMillis()

@@ -1,3 +1,15 @@
+/**
+ * EventDatabase.kt
+ *
+ * Defines the Room database setup for storing calendar events.
+ * - `Event`: Entity representing a calendar event.
+ * - `EventDao`: Data access object for querying and managing events.
+ * - `AppDatabase`: Room database class.
+ * - `Converters`: Type converters for complex data (e.g., ConferenceData).
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import androidx.room.ColumnInfo
@@ -42,6 +54,9 @@ interface EventDao {
     suspend fun getNextEvent(currentTime: String): Event?
     @Delete
     suspend fun delete(event: Event)
+
+    @Query("DELETE FROM events")
+    suspend fun deleteAllEvents()
 }
 
 

@@ -78,6 +78,28 @@
                 <action android:name="dev.sudhanshu.calender.REMINDER_EVENT" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name="dev.sudhanshu.calender.widget.DayViewWidget$DayViewWidgetReceiver"
+            android:label="@string/widget_label"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/day_view_widget_info"/>
+        </receiver>
+
+
+        <receiver
+            android:name="androidx.glance.appwidget.action.ActionCallbackBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="androidx.glance.appwidget.action.RUN_CALLBACK" />
+            </intent-filter>
+        </receiver>
         <activity android:name=".presentation.view.AppLauncher"/>
         <receiver
             android:name=".presentation.view.MyDeviceAdminReceiver"
@@ -86,6 +108,21 @@
                 android:name="android.app.device_admin"
                 android:resource="@xml/device_admin" />
         </receiver>
+<!--        <receiver-->
+<!--            android:name="dev.sudhanshu.calender.widget.ChangeMonthAction"-->
+<!--            android:exported="false">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="androidx.glance.appwidget.action.RUN_CALLBACK" />-->
+<!--            </intent-filter>-->
+<!--        </receiver>-->
+
+<!--        <receiver-->
+<!--            android:name="dev.sudhanshu.calender.widget.OpenCalendarAction"-->
+<!--            android:exported="false">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="androidx.glance.appwidget.action.RUN_CALLBACK" />-->
+<!--            </intent-filter>-->
+<!--        </receiver>-->
 
     </application>
     <queries>

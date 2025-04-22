@@ -1,3 +1,18 @@
+/**
+ * AddShoppingDialog.kt (In Progress)
+ *
+ * This file defines a simple Compose-based dialog that allows the user to add a new shopping item.
+ *
+ * Usage:
+ * - Triggered when the user taps a button (likely a "+" or "Add Item" button).
+ * - Pops up a dialog with a text field to enter the item name.
+ * - Includes "Cancel" and "Add" buttons to dismiss or submit the input.
+ *
+ * This dialog is a clean and lightweight way to collect user input for a shopping list.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import androidx.compose.foundation.layout.Arrangement

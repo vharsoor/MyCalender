@@ -1,3 +1,12 @@
+/**
+ * AddContactScreen.kt
+ *
+ * Allows users to add a new contact via a bottom-start button and dialog.
+ * - Collects name, email, and phone number input.
+ * - Uses People API to create a Google contact with the user's access token.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.content.Context

@@ -1,3 +1,12 @@
+/**
+ * TaskListScreen.kt
+ *
+ * Displays all tasks added by the user.
+ * - Shows loading, empty, or task list state.
+ * - Each task can be deleted and the list refreshes accordingly.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.os.Build

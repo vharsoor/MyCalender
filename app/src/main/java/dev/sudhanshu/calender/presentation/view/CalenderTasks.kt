@@ -1,3 +1,14 @@
+/**
+ * CalenderTasks.kt
+ *
+ * This file defines the CalenderTasks activity which displays the user's saved task list.
+ *
+ *
+ * This activity provides a dedicated screen for users to view their scheduled tasks.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.os.Build

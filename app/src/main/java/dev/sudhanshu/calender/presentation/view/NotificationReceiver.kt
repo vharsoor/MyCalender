@@ -1,3 +1,15 @@
+/**
+ * NotificationReceiver.kt
+ *
+ * BroadcastReceiver to show notifications when triggered.
+ * - Receives title and message from an Notification Intent.
+ * - Builds and displays a high-priority notification.
+ * - Useful for scheduling reminders or alerting the user from background tasks.
+ */
+
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.app.Activity

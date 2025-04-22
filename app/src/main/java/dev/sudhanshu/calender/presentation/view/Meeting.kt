@@ -1,4 +1,14 @@
-// File: Meeting.kt
+/**
+ * Meeting.kt
+ *
+ * Defines models for scheduling meetings and converting them into Google Calendar event format.
+ * - `Meeting`: User-defined meeting details.
+ * - `Meeting_Event`: Structure used to create calendar events.
+ * - Includes time, agenda, and attendee email info.
+ */
+
+
+
 package dev.sudhanshu.calendar.presentation.view
 
 import com.google.gson.annotations.SerializedName

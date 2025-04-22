@@ -1,3 +1,11 @@
+/**
+ * This file handles Google Sign-In integration, including requesting access to Calendar and Contacts,
+ * exchanging auth codes for OAuth tokens, and storing refresh tokens securely.
+ * It also manages Firebase Cloud Messaging (FCM), handling new token generation, sending the token to
+ * the backend with the user's primary Google Calendar ID, and processing push notifications.
+ * Additionally, it fetches and schedules calendar events and notifications from both cloud and local storage.
+ */
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.Manifest

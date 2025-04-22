@@ -1,3 +1,11 @@
+/**
+ * DatabaseProvider.kt
+ *
+ * Singleton object to provide a Room database instance.
+ * - Ensures only one instance of AppDatabase is created.
+ * - Uses fallbackToDestructiveMigration for simplicity in schema changes.
+ */
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.content.Context

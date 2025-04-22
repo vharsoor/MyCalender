@@ -80,6 +80,9 @@ dependencies {
     implementation(libs.firebase.messaging.ktx)
     implementation(libs.identity.jvm)
     implementation(libs.androidx.browser)
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.play.services.fitness)
     testImplementation(libs.junit)
     implementation(libs.accompanist.systemuicontroller)
     androidTestImplementation(libs.androidx.junit)
@@ -110,7 +113,7 @@ dependencies {
     implementation(libs.okhttp)
 
     // Kotlin Coroutines dependencies
-    implementation(libs.kotlinx.coroutines.android) 
+    implementation(libs.kotlinx.coroutines.android)
 
     // Hilt dependencies
     implementation(libs.hilt.android)
@@ -160,4 +163,6 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-analytics")
+    implementation("androidx.glance:glance-appwidget:1.0.0-alpha08")
+
 }

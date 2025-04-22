@@ -1,3 +1,14 @@
+/**
+ * EventServer.kt
+ *
+ * A secure local HTTPS server using NanoHTTPD.
+ * - Accepts POST requests with data (e.g., event info).
+ * - Can be used to receive task or event data from external sources.
+ * - Uses SSL with a local keystore for secure communication.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import fi.iki.elonen.NanoHTTPD

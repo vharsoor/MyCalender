@@ -1,3 +1,13 @@
+/**
+ * Splash.kt (Came with vanilla calendar)
+ *
+ * Displays a fading splash screen on app launch.
+ * - Animates app logo with fade-in.
+ * - Initializes a random user ID if none is set.
+ * - Navigates to MainActivity after a short delay.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.content.Intent

@@ -1,8 +1,23 @@
+/**
+ * FetchEvents.kt
+ *
+ * Fetches Google Calendar events using the Calendar API.
+ * - Retrieves upcoming events and syncs them into the local Room database.
+ * - Provides suspend and callback-based methods for integration with the app.
+ * - Supports data parsing, storage, and logging for debugging and widgets.
+ */
+
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.content.Context
 import retrofit2.Call
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -62,6 +77,42 @@ class FetchEvents (private val context: Context){
                     eventResponses?.let{
                         eventList->
                         onSuccess(eventList.items)
+
+                        GlobalScope.launch(Dispatchers.IO) {
+                            // Get your DB instance. For example:
+                            // val db = Room.databaseBuilder(
+                            //     context,
+                            //     AppDatabase::class.java,
+                            //     "events-db"
+                            // ).build()
+
+                            val db = DatabaseProvider.getDatabase(context)
+                            val eventDao = db.eventDao()
+
+                            // Clear out all old events
+                            eventDao.deleteAllEvents()
+
+                            // Convert each GoogleCalendarEvent to your local Room Event entity
+                            val roomEvents = eventList.items.map { gEvent ->
+                                Event(
+                                    eventId    = gEvent.id ?: "unknown_id",
+                                    eventName  = gEvent.summary ?: "No Summary",
+                                    eventStart = gEvent.start?.dateTime ?: "unknown_start_time",
+                                    eventEnd   = gEvent.end?.dateTime   ?: "unknown_end_time",
+                                    eventLink  = gEvent.hangoutLink ?: "No Link"
+                                )
+                            }
+
+                            // Insert them (OnConflictStrategy.REPLACE from your DAO)
+                            eventDao.insertAll(*roomEvents.toTypedArray())
+
+                            val newList = eventDao.getAll()
+                            Log.d("DayViewWidget", "After insertAll, DB has ${newList.size} events:")
+                            newList.forEach { e ->
+                                Log.d("DayViewWidget", "DB event: id=${e.eventId}, start=${e.eventStart}, end=${e.eventEnd}")
+                            }
+                        }
+
                     }?: run{
                         onError(-1)
                     }
@@ -71,6 +122,8 @@ class FetchEvents (private val context: Context){
                     onError(response.code())
                 }
 
+
+
             }
             override fun onFailure(call: Call<GoogleCalendarResponse>, t: Throwable){
                 Log.e("Calendar Reminder", "Error: ${t.message}")
@@ -79,6 +132,8 @@ class FetchEvents (private val context: Context){
 
         })
     }
+
+
     suspend fun fetchEventsFromCloud(accessToken: String, eventMap: MutableMap<String, Event>): Unit =
         suspendCancellableCoroutine { continuation ->
             if (accessToken != null) {
@@ -128,6 +183,7 @@ class FetchEvents (private val context: Context){
             @Query("timeMin") timeMin: String,
             @Query("orderBy") orderBy: String = "startTime",
             @Query("singleEvents") singleEvents: Boolean = true,
+            @Query("timeZone") timeZone: String = "UTC",
         ): Call<GoogleCalendarResponse>
 
     }

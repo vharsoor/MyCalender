@@ -1,3 +1,14 @@
+/**
+ * CalenderTaskScreen.kt
+ *
+ * Shows a list of tasks for a selected date.
+ * - Displays loading, empty, or task list states.
+ * - Each task card shows title, time, and delete option.
+ * - Uses TaskViewModel to fetch and manage tasks.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.os.Build

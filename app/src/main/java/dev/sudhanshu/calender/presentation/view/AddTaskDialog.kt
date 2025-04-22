@@ -1,3 +1,20 @@
+/**
+ * AddTaskDialog.kt
+ *
+ * This file defines a Composable dialog that pops up when the user taps a small button (typically
+ * located at the bottom-right corner of the screen) to add a new task.
+ *
+ * Main Features:
+ * - Collects task title, description, and user-selected start/end times using TimePickerDialogs.
+ * - Validates that the end time is after the start time.
+ * - Saves the task to a local database and optionally to Google Calendar via InsertTask.
+ * - Automatically triggers UI updates by fetching the task list for the selected date.
+ *
+ * It is a user-friendly way to schedule tasks and optionally create Google Calendar events with meet links.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 

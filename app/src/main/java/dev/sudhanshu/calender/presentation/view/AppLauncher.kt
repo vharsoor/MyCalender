@@ -1,3 +1,17 @@
+/**
+ * AppLauncher.kt
+ *
+ * Could try this, if we decide to come back to app pinning mode
+ *
+ * Launches and pins a target app (e.g., Chrome) in Lock Task (kiosk) mode.
+ * - Checks if lock task is permitted via DevicePolicyManager.
+ * - Dynamically launches and pins the target app.
+ * - Exits lock task mode when destroyed.
+ */
+
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.app.Activity

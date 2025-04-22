@@ -1,3 +1,14 @@
+/**
+ * LockScreenReceiver.kt
+ *
+ * Used if you want to pin app when locked, and unpin the app when unlocked
+ * BroadcastReceiver that listens for screen lock/unlock events.
+ * - Logs when the screen is turned off or the user unlocks the device.
+ * - Can be used to trigger app-specific actions on lock/unlock.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.app.Activity.RESULT_OK

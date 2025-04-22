@@ -1,3 +1,12 @@
+/**
+ * MyDeviceAdminReceiver.kt
+ *
+ * Handles device admin status changes.
+ * - Shows a toast when device admin is enabled or disabled.
+ * - Provides a utility to create a ComponentName for registration.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.app.admin.DeviceAdminReceiver

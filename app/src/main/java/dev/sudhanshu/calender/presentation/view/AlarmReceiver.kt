@@ -1,3 +1,18 @@
+/**
+ * EventScheduler.kt
+ *
+ * This file defines a BroadcastReceiver that handles scheduling and triggering of calendar event reminders.
+ *
+ * Main Responsibilities:
+ * - Fetches events from the cloud using an access token.
+ * - Schedules alarms using Android's AlarmManager to trigger reminders 10 minutes before event start time.
+ * - Sends local broadcasts with event details when alarms go off.
+ * - Converts event start times from RFC 3339 format to milliseconds.
+ *
+ * This enables background notifications for upcoming events, even when the app is not actively running.
+ */
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.app.AlarmManager
@@ -61,6 +76,7 @@ class EventScheduler : BroadcastReceiver() {
         context: Context,
         alarmManager: AlarmManager,
         event: dev.sudhanshu.calender.presentation.view.Event,
+
         eventTimeMillis: Long
     ) {
         val requestCode = event.eventId.hashCode()
@@ -100,13 +116,22 @@ class EventScheduler : BroadcastReceiver() {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
-    private fun convertRFC3339ToMillis(rfc3339: String): Long? {
+    /*private fun convertRFC3339ToMillis(rfc3339: String): Long? {
         return try {
             val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
             formatter.timeZone = TimeZone.getTimeZone("UTC")
             formatter.parse(rfc3339)?.time
         } catch (e: Exception) {
             Log.e("EventScheduler", "Error parsing date: $rfc3339")
+            null
+        }
+    }*/
+    private fun convertRFC3339ToMillis(rfc3339: String): Long? {
+        return try {
+            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+            formatter.parse(rfc3339)?.time
+        } catch (e: Exception) {
+            Log.e("EventScheduler", "Error parsing date: $rfc3339", e)
             null
         }
     }

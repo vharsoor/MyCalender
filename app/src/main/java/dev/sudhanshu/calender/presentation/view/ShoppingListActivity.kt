@@ -1,3 +1,14 @@
+/**
+ * ShoppingListActivity.kt (In - Progress)
+ *
+ * A simple shopping list screen.
+ * - Lets users add items and mark them with checkboxes.
+ * - Uses Room DB to store and fetch shopping items.
+ * - Provides a button to navigate back to the calendar view.
+ */
+
+
+
 package dev.sudhanshu.calender.presentation.view
 
 import android.content.Intent
